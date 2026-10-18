@@ -30,6 +30,7 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "blit.h"
 #include "config_json.h"
@@ -222,6 +223,24 @@ Config ConfigNewString(const char *name, const char *defaultValue)
 	CASSERT(false, "unimplemented");
 	return c;
 }
+static int StrScaleFactor(const char *s)
+{
+	return strcmp(s, "Auto") == 0 ? 0 : atoi(s);
+}
+static char *ScaleFactorStr(int i)
+{
+	static char buf[32];
+	if (i == 0)
+	{
+		strcpy(buf, "Auto");
+	}
+	else
+	{
+		sprintf(buf, "%d", i);
+	}
+	return buf;
+}
+
 Config ConfigNewInt(
 	const char *name, const int defaultValue, const int minValue,
 	const int maxValue, const int increment, int (*strToInt)(const char *),
@@ -631,16 +650,17 @@ Config ConfigDefault(void)
 		&gfx, ConfigNewInt("WindowWidth", 640, 320, 4096, 0, NULL, NULL));
 	ConfigGroupAdd(
 		&gfx, ConfigNewInt("WindowHeight", 480, 200, 2160, 0, NULL, NULL));
+	// 0 = Auto: picked from the window size (see GraphicsAutoScale)
 	ConfigGroupAdd(
 		&gfx, ConfigNewInt(
 				  "ScaleFactor",
 #ifdef __GCWZERO__
 				  1
 #else
-				  2
+				  0
 #endif
 				  ,
-				  1, 16, 1, NULL, NULL));
+				  0, 16, 1, StrScaleFactor, ScaleFactorStr));
 	ConfigGroupAdd(&gfx, ConfigNewBool("DOSPAR", true));
 	ConfigGroupAdd(
 		&gfx, ConfigNewInt("ShakeMultiplier", 1, 0, 10, 1, NULL, NULL));

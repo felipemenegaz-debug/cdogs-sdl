@@ -79,7 +79,8 @@ void MousePrePoll(Mouse *mouse)
 	mouse->wheel = svec2i_zero();
 	mouse->previousPos = mouse->currentPos;
 	SDL_GetMouseState(&mouse->currentPos.x, &mouse->currentPos.y);
-	int scale = ConfigGetInt(&gConfig, "Graphics.ScaleFactor");
+	// The scale in use ("Auto" is resolved from the window size)
+	int scale = gGraphicsDevice.cachedConfig.ScaleFactor;
 	if (scale == 0)
 		scale = 1;
 	mouse->currentPos = svec2i_scale_divide(mouse->currentPos, scale);

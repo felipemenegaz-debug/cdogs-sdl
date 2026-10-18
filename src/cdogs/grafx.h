@@ -104,6 +104,10 @@ extern GraphicsDevice gGraphicsDevice;
 void GraphicsInit(GraphicsDevice *device, Config *c);
 void GraphicsInitialize(GraphicsDevice *g);
 // Pixels per logical pixel the game is drawn at
+// Rows of the game's internal resolution that ScaleFactor "Auto" aims for
+#define AUTO_SCALE_ROWS 270
+// The scale factor "Auto" (ScaleFactor 0) uses for a window size
+int GraphicsAutoScale(const struct vec2i windowSize);
 int GraphicsRenderScale(const GraphicsDevice *g);
 void GraphicsTerminate(GraphicsDevice *g);
 int GraphicsGetScreenSize(GraphicsConfig *config);

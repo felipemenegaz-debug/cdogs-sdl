@@ -81,6 +81,14 @@ void GraphicsInit(GraphicsDevice *device, Config *c)
 // Initialises the video subsystem.
 // To prevent needless screen flickering, config is compared with cache
 // to see if anything changed. If not, don't recreate the screen.
+int GraphicsAutoScale(const struct vec2i windowSize)
+{
+	// Keep about the classic view (240-270 rows): the visible map area then
+	// stays the same at any window size, instead of growing past the sight
+	// range (which left most of a maximised window dark)
+	return MAX(1, (windowSize.y + AUTO_SCALE_ROWS / 2) / AUTO_SCALE_ROWS);
+}
+
 int GraphicsRenderScale(const GraphicsDevice *g)
 {
 	// In HD, draw at the window's resolution (up to the 4x of the art)
@@ -349,7 +357,9 @@ void GraphicsConfigSet(
 			ConfigSetInt(&gConfig, "Graphics.WindowHeight", dm.h);
 		}
 	}
-	SET(c->ScaleFactor, scaleFactor, RESTART_SCALE_MODE);
+	const int scale =
+		scaleFactor > 0 ? scaleFactor : GraphicsAutoScale(windowSize);
+	SET(c->ScaleFactor, scale, RESTART_SCALE_MODE);
 	if (c->DOSPAR != dosPAR)
 	{
 		if (!SDL_SetHint(
@@ -367,9 +377,8 @@ void GraphicsConfigSet(
 	SET(c->SecondWindow, secondWindow, RESTART_WINDOW);
 	const struct vec2i res =
 		c->DOSPAR ? svec2i(
-						windowSize.x / scaleFactor,
-						windowSize.y * 5 / scaleFactor / 6)
-				  : svec2i_scale_divide(windowSize, scaleFactor);
+						windowSize.x / scale, windowSize.y * 5 / scale / 6)
+				  : svec2i_scale_divide(windowSize, scale);
 	if (!svec2i_is_equal(res, c->Res))
 	{
 		c->Res = res;
