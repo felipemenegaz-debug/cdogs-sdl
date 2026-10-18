@@ -42,8 +42,11 @@
 // World points are given in classic coordinates: x/y in map pixels and a
 // height h in classic screen pixels (a wall top is h = 12).
 
-// Camera distance in pixels; smaller means stronger perspective
+// Camera distance in pixels for a screen PERSPECTIVE_REF_ROWS tall; smaller
+// means stronger perspective. Taller screens scale it, so the perspective
+// looks the same at any internal resolution.
 #define PERSPECTIVE_DIST_DEFAULT 480.0f
+#define PERSPECTIVE_REF_ROWS 240.0f
 // Points closer to the camera than this fraction of the distance are culled
 #define PERSPECTIVE_NEAR 0.1f
 

@@ -676,8 +676,10 @@ void Draw25DWorld(
 	const struct vec2 focusScreen = svec2(
 		b->Origin.x - (float)b->xTop + (float)offset.x,
 		b->Origin.y - (float)b->yTop + (float)offset.y);
-	DrawPerspectiveInit(
-		&b->Perspective, b->Origin, focusScreen, PERSPECTIVE_DIST_DEFAULT);
+	const float dist = PERSPECTIVE_DIST_DEFAULT *
+					   MAX(1.0f, (float)gGraphicsDevice.cachedConfig.Res.y /
+									 PERSPECTIVE_REF_ROWS);
+	DrawPerspectiveInit(&b->Perspective, b->Origin, focusScreen, dist);
 	b->UsePerspective = true;
 	const DrawPerspective *p = &b->Perspective;
 
