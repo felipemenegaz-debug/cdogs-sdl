@@ -118,6 +118,8 @@ static const float sAmbient[3] = {0.62f, 0.64f, 0.78f};
 #define GLOW_SIZE 64
 static SDL_Texture *sGlow = NULL;
 static bool sGlowFailed = false;
+static SDL_Texture *sShadow = NULL;
+static bool sShadowFailed = false;
 // Set while drawing things that must keep their own colour
 static bool sUnlit = false;
 
@@ -133,6 +135,48 @@ void Draw25DResetTextures(void)
 	sAtlasFailed = false;
 	sGlow = NULL;
 	sGlowFailed = false;
+	sShadow = NULL;
+	sShadowFailed = false;
+}
+
+// A soft round blot (white, the alpha falling off) for cast shadows
+static bool EnsureShadow(SDL_Renderer *r)
+{
+	if (sShadow != NULL)
+	{
+		return true;
+	}
+	if (sShadowFailed)
+	{
+		return false;
+	}
+	sShadow = SDL_CreateTexture(
+		r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, GLOW_SIZE,
+		GLOW_SIZE);
+	if (sShadow == NULL)
+	{
+		LOG(LM_GFX, LL_ERROR, "cannot create 2.5D shadow: %s", SDL_GetError());
+		sShadowFailed = true;
+		return false;
+	}
+	Uint32 px[GLOW_SIZE * GLOW_SIZE];
+	for (int y = 0; y < GLOW_SIZE; y++)
+	{
+		for (int x = 0; x < GLOW_SIZE; x++)
+		{
+			const float dx = (x + 0.5f) / GLOW_SIZE * 2 - 1;
+			const float dy = (y + 0.5f) / GLOW_SIZE * 2 - 1;
+			float f = 1.0f - (dx * dx + dy * dy);
+			f = f > 0 ? sqrtf(f) : 0;
+			px[y * GLOW_SIZE + x] = (Uint32)(f * 255) << 24 | 0x00FFFFFFu;
+		}
+	}
+	SDL_UpdateTexture(sShadow, NULL, px, GLOW_SIZE * sizeof(Uint32));
+	SDL_SetTextureBlendMode(sShadow, SDL_BLENDMODE_BLEND);
+#if SDL_VERSION_ATLEAST(2, 0, 12)
+	SDL_SetTextureScaleMode(sShadow, SDL_ScaleModeLinear);
+#endif
+	return true;
 }
 
 // A round, soft white spot for the light splashes on the floor
@@ -330,8 +374,69 @@ static void AddThingLight(const Thing *t)
 	}
 }
 
-// Light reaching a world point, as a colour multiplier (0..1 per channel)
-static void LightAt(const struct vec2 w, float out[3])
+static bool IsSolid(const Map *map, const struct vec2i pos);
+static float DoorClosed(const DoorState *d);
+
+// Walls and closed doors stop light
+static bool BlocksLight(const struct vec2i pos)
+{
+	if (IsSolid(&gMap, pos))
+	{
+		return true;
+	}
+	const Tile *t = MapGetTile(&gMap, pos);
+	return t->Class != NULL && t->Class->Type == TILE_CLASS_DOOR &&
+		   t->Door.Class != NULL && DoorClosed(&t->Door) > 0.5f;
+}
+
+// Whether light travels from one map point to another without crossing a
+// wall: a walk over the tiles the segment passes through (Amanatides-Woo).
+// The tiles of both ends do not count.
+static bool LightReaches(const struct vec2 from, const struct vec2 to)
+{
+	const float x0 = from.x / TILE_WIDTH, y0 = from.y / TILE_HEIGHT;
+	const float x1 = to.x / TILE_WIDTH, y1 = to.y / TILE_HEIGHT;
+	int cx = (int)floorf(x0), cy = (int)floorf(y0);
+	const int ex = (int)floorf(x1), ey = (int)floorf(y1);
+	const float dx = x1 - x0, dy = y1 - y0;
+	const int sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+	const float adx = fabsf(dx), ady = fabsf(dy);
+	float tMaxX = adx > 1e-6f ? (sx > 0 ? cx + 1 - x0 : x0 - cx) / adx : 2.0f;
+	float tMaxY = ady > 1e-6f ? (sy > 0 ? cy + 1 - y0 : y0 - cy) / ady : 2.0f;
+	const float tDeltaX = adx > 1e-6f ? 1.0f / adx : 2.0f;
+	const float tDeltaY = ady > 1e-6f ? 1.0f / ady : 2.0f;
+	while (cx != ex || cy != ey)
+	{
+		if (tMaxX < tMaxY)
+		{
+			if (tMaxX > 1.0f)
+			{
+				break;
+			}
+			cx += sx;
+			tMaxX += tDeltaX;
+		}
+		else
+		{
+			if (tMaxY > 1.0f)
+			{
+				break;
+			}
+			cy += sy;
+			tMaxY += tDeltaY;
+		}
+		if ((cx != ex || cy != ey) && BlocksLight(svec2i(cx, cy)))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+// Light reaching a world point, as a colour multiplier (0..1 per channel).
+// normal is the direction a wall face looks at (zero for the floor, tops
+// and sprites): faces turned away from a light get none of it.
+static void LightAt(const struct vec2 w, const struct vec2 normal, float out[3])
 {
 	if (!sLighting || sUnlit)
 	{
@@ -353,6 +458,27 @@ static void LightAt(const struct vec2 w, float out[3])
 		{
 			continue;
 		}
+		struct vec2 probe = w;
+		if (normal.x != 0 || normal.y != 0)
+		{
+			if (normal.x * (l->Pos.x - w.x) + normal.y * (l->Pos.y - w.y) <= 0)
+			{
+				continue;
+			}
+			// Test from just in front of the face, in the open tile
+			probe = svec2_add(w, svec2_scale(normal, 0.5f));
+		}
+		else if (d2 > 0)
+		{
+			// Points on a tile edge count as being on the light's side
+			const float d = sqrtf(dx * dx + dy * dy);
+			probe = svec2(
+				w.x - dx / d * 0.5f, w.y - dy / d * 0.5f * TILE_HEIGHT / TILE_WIDTH);
+		}
+		if (!LightReaches(l->Pos, probe))
+		{
+			continue;
+		}
 		// Smooth falloff: full at the centre, zero at the radius
 		const float f = 1.0f - d2 / r2;
 		out[0] += l->R * f * f;
@@ -366,10 +492,11 @@ static void LightAt(const struct vec2 w, float out[3])
 }
 
 static SDL_Color LitColor(
-	const SDL_Color base, const struct vec2 w, const float shade)
+	const SDL_Color base, const struct vec2 w, const struct vec2 normal,
+	const float shade)
 {
 	float l[3];
-	LightAt(w, l);
+	LightAt(w, normal, l);
 	SDL_Color c = {
 		(Uint8)(base.r * l[0] * shade), (Uint8)(base.g * l[1] * shade),
 		(Uint8)(base.b * l[2] * shade), base.a};
@@ -378,11 +505,12 @@ static SDL_Color LitColor(
 
 // Draw a planar quad in the world, corners in order top-left, top-right,
 // bottom-right, bottom-left of the texture region uv0..uv1. corner, if not
-// NULL, is a shade per corner, blended across the quad; every vertex is lit.
+// NULL, is a shade per corner, blended across the quad; every vertex is lit,
+// normal being the direction a vertical face looks at (zero if horizontal).
 static void DrawQuad3D(
 	SDL_Renderer *r, SDL_Texture *tex, const DrawPerspective *p,
 	const Point3 c[4], const struct vec2 uv0, const struct vec2 uv1,
-	const SDL_Color color, const float *corner)
+	const SDL_Color color, const float *corner, const struct vec2 normal)
 {
 #if HAS_GEOMETRY
 	SDL_Vertex v[(QUAD_SUBDIV + 1) * (QUAD_SUBDIV + 1)];
@@ -410,7 +538,7 @@ static void DrawQuad3D(
 				const float bottom = corner[3] + (corner[2] - corner[3]) * fx;
 				shade = top + (bottom - top) * fy;
 			}
-			vx->color = LitColor(color, pt.w, shade);
+			vx->color = LitColor(color, pt.w, normal, shade);
 			vx->tex_coord.x = uv0.x + (uv1.x - uv0.x) * fx;
 			vx->tex_coord.y = uv0.y + (uv1.y - uv0.y) * fy;
 		}
@@ -443,6 +571,7 @@ static void DrawQuad3D(
 	UNUSED(uv1);
 	UNUSED(color);
 	UNUSED(corner);
+	UNUSED(normal);
 #endif
 }
 
@@ -533,7 +662,7 @@ static void DrawFloorTile(
 	}
 	DrawQuad3D(
 		r, t->Class->Pic->Tex, p, c, svec2_zero(), svec2_one(),
-		ToSDLColor(colorWhite, 1.0f), corner);
+		ToSDLColor(colorWhite, 1.0f), corner, svec2_zero());
 }
 
 // Draw a box occupying a whole tile: the texture holds the top face in its
@@ -562,7 +691,8 @@ static void DrawBox(
 				{svec2(w1.x, w0.y), 0},
 				{svec2(w1.x, w1.y), 0}};
 			DrawQuad3D(
-				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE), NULL);
+				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE), NULL,
+				svec2(1, 0));
 		}
 		if (sides && !IsSolid(&gMap, svec2i(pos.x - 1, pos.y)) &&
 			w0.x > p->Focus.x)
@@ -573,7 +703,8 @@ static void DrawBox(
 				{svec2(w0.x, w1.y), 0},
 				{svec2(w0.x, w0.y), 0}};
 			DrawQuad3D(
-				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE), NULL);
+				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE), NULL,
+				svec2(-1, 0));
 		}
 		if (!sides || !IsSolid(&gMap, svec2i(pos.x, pos.y + 1)))
 		{
@@ -583,7 +714,8 @@ static void DrawBox(
 				{svec2(w1.x, w1.y), 0},
 				{svec2(w0.x, w1.y), 0}};
 			DrawQuad3D(
-				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_FRONT), NULL);
+				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_FRONT), NULL,
+				svec2(0, 1));
 		}
 	}
 
@@ -593,7 +725,8 @@ static void DrawBox(
 		{w1, WALL_H},
 		{svec2(w0.x, w1.y), WALL_H}};
 	DrawQuad3D(
-		r, tex, p, top, uv0, svec2(uv1.x, vMid), ToSDLColor(mask, 1.0f), NULL);
+		r, tex, p, top, uv0, svec2(uv1.x, vMid), ToSDLColor(mask, 1.0f), NULL,
+		svec2_zero());
 }
 
 static void DrawWallTile(
@@ -681,7 +814,7 @@ static void DrawDoorTile(
 		DrawQuad3D(
 			r, tex, p, front, svec2(0, vTop),
 			svec2(1, vTop + (1 - vTop) * closed),
-			ToSDLColor(mask, SHADE_FRONT), NULL);
+			ToSDLColor(mask, SHADE_FRONT), NULL, svec2(0, 1));
 		const Point3 top[4] = {
 			{svec2(w0.x, yc - t), h},
 			{svec2(w1.x, yc - t), h},
@@ -689,7 +822,7 @@ static void DrawDoorTile(
 			{svec2(w0.x, yc + t), h}};
 		DrawQuad3D(
 			r, tex, p, top, svec2_zero(), svec2(1, vTop),
-			ToSDLColor(mask, 1.0f), NULL);
+			ToSDLColor(mask, 1.0f), NULL, svec2_zero());
 	}
 	else
 	{
@@ -707,7 +840,7 @@ static void DrawDoorTile(
 				{svec2(xb, w1.y), 0}};
 			DrawQuad3D(
 				r, tex, p, c, svec2_zero(), svec2(1, closed),
-				ToSDLColor(mask, SHADE_SIDE), NULL);
+				ToSDLColor(mask, SHADE_SIDE), NULL, svec2(1, 0));
 		}
 		if (xa > p->Focus.x)
 		{
@@ -718,7 +851,7 @@ static void DrawDoorTile(
 				{svec2(xa, w0.y), 0}};
 			DrawQuad3D(
 				r, tex, p, c, svec2_zero(), svec2(1, closed),
-				ToSDLColor(mask, SHADE_SIDE), NULL);
+				ToSDLColor(mask, SHADE_SIDE), NULL, svec2(-1, 0));
 		}
 		const Point3 front[4] = {
 			{svec2(xa, w1.y), h},
@@ -727,7 +860,7 @@ static void DrawDoorTile(
 			{svec2(xa, w1.y), 0}};
 		DrawQuad3D(
 			r, tex, p, front, svec2_zero(), svec2(1, closed),
-			ToSDLColor(mask, SHADE_FRONT), NULL);
+			ToSDLColor(mask, SHADE_FRONT), NULL, svec2(0, 1));
 		const Point3 top[4] = {
 			{svec2(xa, w0.y), h},
 			{svec2(xb, w0.y), h},
@@ -735,7 +868,7 @@ static void DrawDoorTile(
 			{svec2(xa, w1.y), h}};
 		DrawQuad3D(
 			r, tex, p, top, svec2_zero(), svec2_one(), ToSDLColor(mask, 1.0f),
-			NULL);
+			NULL, svec2_zero());
 	}
 }
 
@@ -785,7 +918,7 @@ static void DrawBillboard(
 	sNumLights = lightsBefore;
 	const SDL_Color white = ToSDLColor(colorWhite, 1.0f);
 	const SDL_Color color =
-		emits || !lit ? white : LitColor(white, pos, 1.0f);
+		emits || !lit ? white : LitColor(white, pos, svec2_zero(), 1.0f);
 	SDL_Vertex v[4];
 	for (int i = 0; i < 4; i++)
 	{
@@ -833,7 +966,9 @@ static void DrawDecal(
 	const Point3 c[4] = {
 		{svec2(x0, y0), 0}, {svec2(x1, y0), 0}, {svec2(x1, y1), 0},
 		{svec2(x0, y1), 0}};
-	DrawQuad3D(r, sAtlas, p, c, uv0, uv1, ToSDLColor(colorWhite, 1.0f), NULL);
+	DrawQuad3D(
+		r, sAtlas, p, c, uv0, uv1, ToSDLColor(colorWhite, 1.0f), NULL,
+		svec2_zero());
 }
 
 // Soft splashes of light on the floor, added on top of it; walls drawn
@@ -863,8 +998,99 @@ static void DrawGlows(SDL_Renderer *r, const DrawPerspective *p)
 			(Uint8)(MIN(l->R * l->Glow, 1.0f) * 255),
 			(Uint8)(MIN(l->G * l->Glow, 1.0f) * 255),
 			(Uint8)(MIN(l->B * l->Glow, 1.0f) * 255), 255};
-		DrawQuad3D(r, sGlow, p, c, svec2_zero(), svec2_one(), color, NULL);
+		DrawQuad3D(
+			r, sGlow, p, c, svec2_zero(), svec2_one(), color, NULL,
+			svec2_zero());
 	}
+	sUnlit = false;
+}
+
+// Shadows the lights cast from characters onto the floor: a soft blot
+// stretched away from each light (at most the two strongest), longer and
+// fainter as the light gets further
+#define SHADOW_LIGHTS 2
+static void DrawCharacterShadows(SDL_Renderer *r, const DrawPerspective *p)
+{
+	if (!sLighting || sNumLights == 0 || !EnsureShadow(r))
+	{
+		return;
+	}
+	const float k = (float)TILE_HEIGHT / TILE_WIDTH; // ground y -> map y
+	sUnlit = true;
+	CA_FOREACH(const ThingEntry, e, sNormal)
+	if (e->t->kind != KIND_CHARACTER)
+	{
+		continue;
+	}
+	const struct vec2 feet = ThingDrawPos(e->t);
+	// The strongest lights on this character
+	int best[SHADOW_LIGHTS] = {-1, -1};
+	float bestF[SHADOW_LIGHTS] = {0, 0};
+	for (int i = 0; i < sNumLights; i++)
+	{
+		const Light *l = &sLights[i];
+		const float dx = feet.x - l->Pos.x;
+		const float dy = (feet.y - l->Pos.y) / k;
+		const float d2 = dx * dx + dy * dy;
+		const float r2 = l->Radius * l->Radius;
+		// A light on the character itself (its own) casts nothing visible
+		if (d2 >= r2 || d2 < 9.0f || !LightReaches(l->Pos, feet))
+		{
+			continue;
+		}
+		const float f = (1.0f - d2 / r2) * (l->R + l->G + l->B) / 3;
+		for (int j = 0; j < SHADOW_LIGHTS; j++)
+		{
+			if (f > bestF[j])
+			{
+				for (int m = SHADOW_LIGHTS - 1; m > j; m--)
+				{
+					best[m] = best[m - 1];
+					bestF[m] = bestF[m - 1];
+				}
+				best[j] = i;
+				bestF[j] = f;
+				break;
+			}
+		}
+	}
+	for (int j = 0; j < SHADOW_LIGHTS; j++)
+	{
+		if (best[j] < 0)
+		{
+			break;
+		}
+		const Light *l = &sLights[best[j]];
+		// Direction away from the light, on the ground
+		float ux = feet.x - l->Pos.x;
+		float uy = (feet.y - l->Pos.y) / k;
+		const float d = sqrtf(ux * ux + uy * uy);
+		ux /= d;
+		uy /= d;
+		const float closeness = 1.0f - d / l->Radius;
+		const float len = 10.0f + 16.0f * (1.0f - closeness);
+		const float halfW = 5.0f;
+		const float back = 2.0f;
+		// Corners on the ground, then into map coordinates
+		const float gx[4] = {
+			-ux * back - uy * halfW, -ux * back + uy * halfW,
+			ux * len + uy * halfW, ux * len - uy * halfW};
+		const float gy[4] = {
+			-uy * back + ux * halfW, -uy * back - ux * halfW,
+			uy * len - ux * halfW, uy * len + ux * halfW};
+		Point3 c[4];
+		for (int i = 0; i < 4; i++)
+		{
+			c[i].w = svec2(feet.x + gx[i], feet.y + gy[i] * k);
+			c[i].h = 0;
+		}
+		const SDL_Color color = {
+			0, 0, 0, (Uint8)(MIN(bestF[j] * 2.0f, 1.0f) * 190)};
+		DrawQuad3D(
+			r, sShadow, p, c, svec2_zero(), svec2_one(), color, NULL,
+			svec2_zero());
+	}
+	CA_FOREACH_END()
 	sUnlit = false;
 }
 
@@ -1095,6 +1321,7 @@ void Draw25DWorld(
 	DrawDecal(r, p, e);
 	CA_FOREACH_END()
 	DrawGlows(r, p);
+	DrawCharacterShadows(r, p);
 
 	// Then back to front, row by row. Within a row, walls go from the sides
 	// in towards the focus column so their side faces overlap correctly,
