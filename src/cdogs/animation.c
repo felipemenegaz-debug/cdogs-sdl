@@ -67,7 +67,25 @@ void AnimationUpdate(Animation *a, const float ticks)
 {
 	a->frameCounter += ticks;
 	a->newFrame = false;
-	if (a->frameCounter > a->ticksPerFrame[a->frame])
+	if (a->frameCounter < 0 && !a->randomFrames)
+	{
+		// Negative ticks play the animation backwards
+		a->newFrame = true;
+		do
+		{
+			a->frame--;
+			if (a->frame < 0)
+			{
+				a->frame = ANIMATION_MAX_FRAMES - 1;
+				while (a->frame > 0 && a->ticksPerFrame[a->frame] <= 0)
+				{
+					a->frame--;
+				}
+			}
+			a->frameCounter += a->ticksPerFrame[a->frame];
+		} while (a->frameCounter < 0);
+	}
+	else if (a->frameCounter > a->ticksPerFrame[a->frame])
 	{
 		a->frameCounter -= a->ticksPerFrame[a->frame];
 		a->newFrame = true;

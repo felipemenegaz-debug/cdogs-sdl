@@ -110,6 +110,15 @@ target_link_libraries(perspective_test
 	${EXTRA_LIBRARIES})
 add_test(NAME perspective_test COMMAND perspective_test)
 
+add_executable(movement_test movement_test.c)
+target_link_libraries(movement_test
+	cbehave
+	cdogs
+	cdogs_proto
+	SDL2::SDL2
+	${EXTRA_LIBRARIES})
+add_test(NAME movement_test COMMAND movement_test)
+
 add_executable(config_test config_test.c)
 target_link_libraries(config_test
 	cbehave

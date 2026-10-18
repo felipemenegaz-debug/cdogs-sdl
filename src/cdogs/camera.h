@@ -54,6 +54,10 @@ typedef struct
 	// immediately follow the next player to join
 	bool FollowNextPlayer;
 	int NumViews;
+	// Look-ahead per view (map pixels from the followed actor), eased
+	// towards CameraLookTarget; reset when the view's actor changes
+	struct vec2 Look[MAX_LOCAL_PLAYERS];
+	int LookActorUID[MAX_LOCAL_PLAYERS];
 } Camera;
 
 void CameraInit(Camera *camera);
@@ -66,3 +70,13 @@ void CameraDraw(Camera *camera, const HUDDrawData drawData);
 void CameraDrawMode(const Camera *camera);
 
 bool CameraIsSingleScreen(void);
+
+// Where a view should lean: towards the aim (unit vector) and a little
+// towards the velocity (pixels per tick), capped. Distances scale with the
+// view so that split screens lean less.
+struct vec2 CameraLookTarget(
+	const struct vec2 aimDir, const struct vec2 vel,
+	const struct vec2i viewSize);
+// Exponential approach to the target; the same at any frame rate
+struct vec2 CameraLookStep(
+	const struct vec2 look, const struct vec2 target, const float seconds);

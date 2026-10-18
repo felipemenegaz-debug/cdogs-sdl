@@ -80,7 +80,15 @@
 #include "triggers.h"
 #include "utils.h"
 
-#define FOOTSTEP_MAX_ANIM_SPEED 2
+// Walking inertia, in ticks for a full speed change (at 70 FPS a tick is
+// ~14 ms): reach 90% speed in ~0.08 s, stop in ~0.08 s and turn around in
+// ~0.05 s. Short enough not to feel like ice, long enough to have weight.
+#define WALK_ACCEL_TICKS 6.4f
+#define WALK_DECEL_TICKS 5.5f
+#define WALK_TURN_TICKS 3.3f
+// Pixels walked per walk cycle (two steps). The run legs are ~16 px apart at
+// full stride, so a planted foot travels ~16 px per step.
+#define WALK_STRIDE 32.0f
 #define REPEL_STRENGTH 0.06f
 #define SLIDE_LOCK 50
 #define SLIDE_X (TILE_WIDTH / 3)
@@ -249,6 +257,7 @@ void UpdateActorState(TActor *actor, int ticks)
 		}
 		actor->dead++;
 		actor->MoveVel = svec2_zero();
+		actor->WalkVel = svec2_zero();
 		actor->stateCounter = 4;
 		actor->thing.flags = 0;
 		return;
@@ -343,15 +352,12 @@ void UpdateActorState(TActor *actor, int ticks)
 	}
 
 	// Animation
-	float animTicks = 1;
+	float animTicks = (float)ticks;
 	if (actor->anim.Type == ACTORANIMATION_WALKING)
 	{
-		// Update walk animation based on actor speed
-		animTicks =
-			MIN(svec2_length(svec2_add(actor->MoveVel, actor->thing.Vel)),
-				FOOTSTEP_MAX_ANIM_SPEED);
+		// Walk cycle follows the distance walked, so the feet don't slide
+		animTicks = ActorWalkAnimTicks(actor->WalkDist);
 	}
-	animTicks *= ticks;
 	AnimationUpdate(&actor->anim, animTicks);
 
 	// Chatting
@@ -1079,6 +1085,49 @@ float ActorGetAimRadians(const TActor *a)
 	return (float)dir2radians[a->direction];
 }
 
+struct vec2 ActorStepWalkVel(
+	const struct vec2 vel, const struct vec2 input, const float maxSpeed,
+	const int ticks)
+{
+	// Without the limit the diagonal would be 41% faster
+	struct vec2 target = input;
+	const float inputLen = svec2_length(input);
+	if (inputLen > 1)
+	{
+		target = svec2_scale(input, 1 / inputLen);
+	}
+	target = svec2_scale(target, maxSpeed);
+	float rampTicks = WALK_ACCEL_TICKS;
+	if (svec2_is_zero(target))
+	{
+		rampTicks = WALK_DECEL_TICKS;
+	}
+	else if (svec2_dot(target, vel) < 0)
+	{
+		rampTicks = WALK_TURN_TICKS;
+	}
+	// Move towards the target by a fixed amount per tick, without overshoot
+	const float step = maxSpeed / rampTicks * (float)ticks;
+	const struct vec2 d = svec2_subtract(target, vel);
+	const float dLen = svec2_length(d);
+	if (dLen <= step || dLen <= FLT_EPSILON)
+	{
+		return target;
+	}
+	return svec2_add(vel, svec2_scale(d, step / dLen));
+}
+
+float ActorWalkAnimTicks(const float dist)
+{
+	const Animation walk = AnimationGetActorAnimation(ACTORANIMATION_WALKING);
+	int cycleTicks = 0;
+	for (int i = 0; i < ANIMATION_MAX_FRAMES && walk.ticksPerFrame[i] > 0; i++)
+	{
+		cycleTicks += walk.ticksPerFrame[i];
+	}
+	return dist / WALK_STRIDE * (float)cycleTicks;
+}
+
 static bool ActorTryChangeDirection(
 	TActor *actor, const int cmd, const int prevCmd)
 {
@@ -1295,6 +1344,14 @@ int CommandActor(TActor *actor, int cmd, int ticks)
 	actor->lastCmd = cmd;
 	return cmd;
 }
+static void ActorSendMove(const TActor *actor)
+{
+	GameEvent e = GameEventNew(GAME_EVENT_ACTOR_MOVE);
+	e.u.ActorMove.UID = actor->uid;
+	e.u.ActorMove.Pos = Vec2ToNet(actor->Pos);
+	e.u.ActorMove.MoveVel = Vec2ToNet(actor->MoveVel);
+	GameEventsEnqueue(&gGameEvents, e);
+}
 static bool ActorTryMove(TActor *actor, int cmd, int ticks)
 {
 	const bool canMoveWhenShooting =
@@ -1308,33 +1365,51 @@ static bool ActorTryMove(TActor *actor, int cmd, int ticks)
 	const bool canMove = !actor->hasShot || canMoveWhenShooting;
 	const bool willMove =
 		!actor->petrified && CMD_HAS_DIRECTION(cmd) && canMove;
-	actor->MoveVel = svec2_zero();
+	const struct vec2 prevMoveVel = actor->MoveVel;
 	const bool isAnalog = !svec2_is_zero(actor->AnalogMove);
+	// Direction and fraction of full speed wanted by the input
+	struct vec2 input = svec2_zero();
 	if (willMove)
 	{
-		const float moveAmount = ActorGetCharacter(actor)->speed * ticks;
 		if (isAnalog)
 		{
 			// Any angle; speed follows how far the stick is pushed
-			actor->MoveVel = svec2_scale(actor->AnalogMove, moveAmount);
+			input = actor->AnalogMove;
 		}
 		else
 		{
-			struct vec2 moveVel = svec2_zero();
 			if (Left(cmd))
-				moveVel.x--;
+				input.x--;
 			else if (Right(cmd))
-				moveVel.x++;
+				input.x++;
 			if (Up(cmd))
-				moveVel.y--;
+				input.y--;
 			else if (Down(cmd))
-				moveVel.y++;
-			if (!svec2_is_zero(moveVel))
+				input.y++;
+			if (!svec2_is_zero(input))
 			{
-				actor->MoveVel =
-					svec2_scale(svec2_normalize(moveVel), moveAmount);
+				input = svec2_normalize(input);
 			}
 		}
+	}
+	const float speed = ActorGetCharacter(actor)->speed;
+	// Human players walk with a short inertia; AI (enemies and AI players)
+	// keeps its exact movement, as it steers every tick and would only
+	// overshoot its waypoints
+	const bool hasInertia =
+		actor->PlayerUID >= 0 &&
+		IsPlayerHuman(PlayerDataGetByUID(actor->PlayerUID));
+	if (hasInertia)
+	{
+		actor->WalkVel =
+			actor->petrified
+				? svec2_zero()
+				: ActorStepWalkVel(actor->WalkVel, input, speed, ticks);
+		actor->MoveVel = svec2_scale(actor->WalkVel, (float)ticks);
+	}
+	else
+	{
+		actor->MoveVel = svec2_scale(input, speed * ticks);
 	}
 
 	// The stick can change angle without changing the 8-way command bits,
@@ -1343,17 +1418,27 @@ static bool ActorTryMove(TActor *actor, int cmd, int ticks)
 		!svec2_is_equal(actor->AnalogMove, actor->lastAnalogMove);
 	actor->lastAnalogMove = actor->AnalogMove;
 
-	// If we have changed our move commands, send the move event
-	if (cmd != actor->lastCmd || actor->hasCollided || analogChanged)
+	// If we have changed our move commands, send the move event; with
+	// inertia the velocity also changes for a few ticks after the input does
+	if (cmd != actor->lastCmd || actor->hasCollided || analogChanged ||
+		!svec2_is_equal(actor->MoveVel, prevMoveVel))
 	{
-		GameEvent e = GameEventNew(GAME_EVENT_ACTOR_MOVE);
-		e.u.ActorMove.UID = actor->uid;
-		e.u.ActorMove.Pos = Vec2ToNet(actor->Pos);
-		e.u.ActorMove.MoveVel = Vec2ToNet(actor->MoveVel);
-		GameEventsEnqueue(&gGameEvents, e);
+		if (hasInertia)
+		{
+			// Events are handled after the actors move, and the event's
+			// position would undo this tick's movement; with inertia it is
+			// resent every tick while speeding up or slowing down, so send
+			// it after moving instead (see ActorUpdatePosition)
+			actor->moveEventPending = true;
+		}
+		else
+		{
+			ActorSendMove(actor);
+		}
 	}
 
-	return willMove || !svec2_is_zero(actor->thing.Vel);
+	return willMove || !svec2_is_zero(actor->MoveVel) ||
+		   !svec2_is_zero(actor->thing.Vel);
 }
 
 void SlideActor(TActor *actor, int cmd)
@@ -1488,6 +1573,8 @@ static void ActorUpdatePosition(TActor *actor, int ticks)
 	{
 		const TActor *vehicle = ActorGetByUID(actor->vehicleUID);
 		newPos = vehicle->Pos;
+		// Don't drive off with the old walking speed when getting out
+		actor->WalkVel = svec2_zero();
 	}
 	else
 	{
@@ -1523,9 +1610,43 @@ static void ActorUpdatePosition(TActor *actor, int ticks)
 		}
 	}
 
+	const struct vec2 oldPos = actor->Pos;
 	if (!svec2_is_nearly_equal(actor->Pos, newPos, EPSILON_POS))
 	{
 		TryMoveActor(actor, newPos);
+	}
+	actor->WalkDist = 0;
+	if (actor->vehicleUID == -1 && !svec2_is_zero(actor->MoveVel))
+	{
+		const struct vec2 moved = svec2_subtract(actor->Pos, oldPos);
+		const struct vec2 wanted = svec2_subtract(newPos, oldPos);
+		// Blocked on an axis (collisions keep that coordinate): lose the
+		// velocity there, so that we slide along walls instead of pushing
+		// into them. Being knocked back is not being blocked.
+		if (fabsf(wanted.x) > EPSILON_POS && fabsf(moved.x) <= EPSILON_POS)
+		{
+			actor->WalkVel.x = 0;
+		}
+		if (fabsf(wanted.y) > EPSILON_POS && fabsf(moved.y) <= EPSILON_POS)
+		{
+			actor->WalkVel.y = 0;
+		}
+		// The legs move only as far as we really walked: not when pushing
+		// into a wall, nor faster when being knocked back
+		const float movedLen = svec2_length(moved);
+		actor->WalkDist = MIN(movedLen, svec2_length(actor->MoveVel));
+		// Walking away from the aim plays the walk cycle backwards
+		const float aim = ActorGetAimRadians(actor);
+		const struct vec2 facing = svec2(sinf(aim), -cosf(aim));
+		if (svec2_dot(moved, facing) < -0.25f * movedLen)
+		{
+			actor->WalkDist = -actor->WalkDist;
+		}
+	}
+	if (actor->moveEventPending)
+	{
+		ActorSendMove(actor);
+		actor->moveEventPending = false;
 	}
 	// Check if we're standing over any manual pickups
 	CheckManualPickups(actor);

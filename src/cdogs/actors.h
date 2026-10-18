@@ -106,6 +106,15 @@ typedef struct Actor
 	// zero means the actor is driven by the 8-way digital commands only
 	struct vec2 AnalogMove;
 	struct vec2 lastAnalogMove;
+	// Walking velocity in pixels per tick, with inertia (human players only;
+	// see ActorStepWalkVel). MoveVel follows it each tick.
+	struct vec2 WalkVel;
+	// Distance actually walked in the last update, negative when walking
+	// backwards (away from the aim); drives the walk cycle
+	float WalkDist;
+	// A move event is due once this tick's position update is done, so that
+	// it carries the new position (human players only)
+	bool moveEventPending;
 	direction_e direction;
 	// Free aim angle from the analog stick; only used while it still falls
 	// inside the current 8-way direction (see ActorGetAimRadians)
@@ -224,6 +233,14 @@ int CommandActor(TActor *actor, int cmd, int ticks);
 // The angle the actor shoots and turns towards: the analog aim when valid,
 // otherwise the classic 8-way direction
 float ActorGetAimRadians(const TActor *a);
+// Short inertia: accelerate towards input * maxSpeed (input is limited to
+// length 1), brake when there is no input and brake harder when the input
+// points against the velocity. Velocities are in pixels per tick.
+struct vec2 ActorStepWalkVel(
+	const struct vec2 vel, const struct vec2 input, const float maxSpeed,
+	const int ticks);
+// Walk cycle ticks for a distance walked, so that the feet don't slide
+float ActorWalkAnimTicks(const float dist);
 void SlideActor(TActor *actor, int cmd);
 void UpdateAllActors(const int ticks);
 void ActorsPilotVehicles(void);

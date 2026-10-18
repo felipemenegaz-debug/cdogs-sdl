@@ -36,12 +36,24 @@
 #include "player.h"
 
 #define PAN_SPEED 4
+// Look-ahead, as fractions of the view's reference height (the height of a
+// 16:9 area that fits in the view; 1080 px at 1080p): lean 150 px towards
+// the aim, plus 0.18 s (12.6 ticks at 70 FPS) of the velocity, up to 170 px.
+#define LOOK_AIM (150.0f / 1080.0f)
+#define LOOK_VEL_TICKS 12.6f
+#define LOOK_MAX (170.0f / 1080.0f)
+// 1/s: how fast the camera catches up with the look-ahead
+#define LOOK_FOLLOW 7.0f
 
 void CameraInit(Camera *camera)
 {
 	memset(camera, 0, sizeof *camera);
 	CameraReset(camera);
 	camera->lastPosition = svec2_zero();
+	for (int i = 0; i < MAX_LOCAL_PLAYERS; i++)
+	{
+		camera->LookActorUID[i] = -1;
+	}
 	HUDInit(&camera->HUD, &gGraphicsDevice, &gMission);
 	camera->shake = ScreenShakeZero();
 }
@@ -121,6 +133,10 @@ void CameraInput(Camera *camera, const int cmd, const int lastCmd)
 
 static struct vec2 GetFollowPlayerPos(
 	const struct vec2 lastPos, const PlayerData *p);
+static struct vec2 UpdateLook(
+	Camera *camera, const int i, const TActor *a, const struct vec2i viewSize,
+	const int ms);
+static void ResetLooks(Camera *camera);
 void CameraUpdate(Camera *camera, const int ticks, const int ms)
 {
 	camera->HUD.DrawData = HUDGetDrawData();
@@ -168,8 +184,10 @@ void CameraUpdate(Camera *camera, const int ticks, const int ms)
 	camera->shake = ScreenShakeUpdate(camera->shake, ticks);
 
 	// Determine how many camera views to use, and set camera position
+	const struct vec2i res = gGraphicsDevice.cachedConfig.Res;
 	if (camera->HUD.DrawData.NumScreens == 0)
 	{
+		ResetLooks(camera);
 		camera->NumViews = 1;
 		SoundSetEars(camera->lastPosition);
 	}
@@ -180,25 +198,30 @@ void CameraUpdate(Camera *camera, const int ticks, const int ms)
 		if (onePlayer || singleScreen)
 		{
 			// Single camera screen
+			// Keep the ear positions on the player(s), not on the camera
+			// look-ahead or map centre, so that sounds don't get muffled
+			// just because there's a wall between player and camera centre
+			struct vec2 earPos;
 			if (onePlayer)
 			{
 				const PlayerData *firstPlayer =
 					camera->HUD.DrawData.Players[0];
 				const TActor *p = ActorGetByUID(firstPlayer->ActorUID);
-				camera->lastPosition = p->thing.Pos;
+				earPos = p->thing.Pos;
+				camera->lastPosition = svec2_add(
+					p->thing.Pos, UpdateLook(camera, 0, p, res, ms));
 				camera->FocusActorUID = p->uid;
 			}
-			else if (singleScreen)
+			else
 			{
-				// One screen
+				// One screen shared by all players: no look-ahead, it
+				// could push the other players off the screen
+				ResetLooks(camera);
 				camera->lastPosition = PlayersGetMidpoint();
+				earPos = camera->lastPosition;
 			}
 
 			// Special case: if map is smaller than screen, center the camera
-			// However, it is important to keep the ear positions unmodified
-			// so that sounds don't get muffled just because there's a wall
-			// between player and camera center
-			const struct vec2 earPos = camera->lastPosition;
 			if (gMap.Size.x * TILE_WIDTH < gGraphicsDevice.cachedConfig.Res.x)
 			{
 				camera->lastPosition.x = (float)gMap.Size.x * TILE_WIDTH / 2;
@@ -223,6 +246,7 @@ void CameraUpdate(Camera *camera, const int ticks, const int ms)
 				const TActor *a = ActorGetByUID(p->ActorUID);
 				camera->lastPosition = a->thing.Pos;
 				SoundSetEarsSide(i == 0, camera->lastPosition);
+				UpdateLook(camera, i, a, svec2i(res.x / 2, res.y), ms);
 			}
 
 			camera->NumViews = 2;
@@ -244,6 +268,7 @@ void CameraUpdate(Camera *camera, const int ticks, const int ms)
 				}
 				const TActor *a = ActorGetByUID(p->ActorUID);
 				camera->lastPosition = a->thing.Pos;
+				UpdateLook(camera, i, a, svec2i(res.x / 2, res.y / 2), ms);
 
 				// Set the sound "ears"
 				const bool isLeft = i == 0 || i == 2;
@@ -284,6 +309,69 @@ static struct vec2 GetFollowPlayerPos(
 	if (a == NULL)
 		return lastPos;
 	return a->Pos;
+}
+
+struct vec2 CameraLookTarget(
+	const struct vec2 aimDir, const struct vec2 vel,
+	const struct vec2i viewSize)
+{
+	const float refH = MIN(viewSize.x * 9.0f / 16.0f, (float)viewSize.y);
+	const struct vec2 look = svec2_add(
+		svec2_scale(aimDir, LOOK_AIM * refH),
+		svec2_scale(vel, LOOK_VEL_TICKS));
+	const float len = svec2_length(look);
+	const float maxLen = LOOK_MAX * refH;
+	if (len > maxLen)
+	{
+		return svec2_scale(look, maxLen / len);
+	}
+	return look;
+}
+
+struct vec2 CameraLookStep(
+	const struct vec2 look, const struct vec2 target, const float seconds)
+{
+	const float t = 1.0f - expf(-LOOK_FOLLOW * seconds);
+	return svec2_add(look, svec2_scale(svec2_subtract(target, look), t));
+}
+
+static struct vec2 UpdateLook(
+	Camera *camera, const int i, const TActor *a, const struct vec2i viewSize,
+	const int ms)
+{
+	if (a == NULL)
+	{
+		camera->LookActorUID[i] = -1;
+		camera->Look[i] = svec2_zero();
+		return camera->Look[i];
+	}
+	if (camera->LookActorUID[i] != a->uid)
+	{
+		// New actor for this view (spawned, or another player): start on
+		// it and ease into the look-ahead
+		camera->LookActorUID[i] = a->uid;
+		camera->Look[i] = svec2_zero();
+	}
+	struct vec2 target = svec2_zero();
+	if (!a->dead)
+	{
+		// Aim radians: 0 = up, clockwise
+		const float aim = ActorGetAimRadians(a);
+		target = CameraLookTarget(
+			svec2(sinf(aim), -cosf(aim)), a->MoveVel, viewSize);
+	}
+	camera->Look[i] =
+		CameraLookStep(camera->Look[i], target, (float)ms / 1000.0f);
+	return camera->Look[i];
+}
+
+static void ResetLooks(Camera *camera)
+{
+	for (int i = 0; i < MAX_LOCAL_PLAYERS; i++)
+	{
+		camera->LookActorUID[i] = -1;
+		camera->Look[i] = svec2_zero();
+	}
 }
 
 static void DoBuffer(
@@ -344,7 +432,7 @@ void CameraDraw(Camera *camera, const HUDDrawData drawData)
 				{
 					continue;
 				}
-				camera->lastPosition = a->thing.Pos;
+				camera->lastPosition = svec2_add(a->thing.Pos, camera->Look[i]);
 				camera->FocusActorUID = a->uid;
 				struct vec2i centerOffsetPlayer = centerOffset;
 				const Rect2i clip = Rect2iNew(
@@ -355,7 +443,7 @@ void CameraDraw(Camera *camera, const HUDDrawData drawData)
 					centerOffsetPlayer.x += w / 2 - centerOffset.x;
 				}
 
-				LOSCalcFrom(&gMap, Vec2ToTile(camera->lastPosition), false);
+				LOSCalcFrom(&gMap, Vec2ToTile(a->thing.Pos), false);
 				DoBuffer(camera, X_TILES_HALF, noise, centerOffsetPlayer);
 			}
 			Draw_Line(w / 2 - 1, 0, w / 2 - 1, h - 1, colorBlack);
@@ -376,7 +464,7 @@ void CameraDraw(Camera *camera, const HUDDrawData drawData)
 				{
 					continue;
 				}
-				camera->lastPosition = a->thing.Pos;
+				camera->lastPosition = svec2_add(a->thing.Pos, camera->Look[i]);
 				camera->FocusActorUID = a->uid;
 				struct vec2i centerOffsetPlayer = centerOffset;
 				const Rect2i clip = Rect2iNew(
@@ -395,7 +483,7 @@ void CameraDraw(Camera *camera, const HUDDrawData drawData)
 				{
 					centerOffsetPlayer.y += h / 4 - centerOffset.y;
 				}
-				LOSCalcFrom(&gMap, Vec2ToTile(camera->lastPosition), false);
+				LOSCalcFrom(&gMap, Vec2ToTile(a->thing.Pos), false);
 				DoBuffer(camera, X_TILES_HALF, noise, centerOffsetPlayer);
 			}
 			Draw_Line(w / 2 - 1, 0, w / 2 - 1, h - 1, colorBlack);
