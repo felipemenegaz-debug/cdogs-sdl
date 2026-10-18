@@ -102,7 +102,15 @@ typedef struct Actor
 	struct vec2 Pos;
 	// Vector that the player is attempting to move in, based on input
 	struct vec2 MoveVel;
+	// Analog stick input for this frame (x right, y down, length 0..1);
+	// zero means the actor is driven by the 8-way digital commands only
+	struct vec2 AnalogMove;
+	struct vec2 lastAnalogMove;
 	direction_e direction;
+	// Free aim angle from the analog stick; only used while it still falls
+	// inside the current 8-way direction (see ActorGetAimRadians)
+	float AimRadians;
+	bool HasAnalogAim;
 	// Rotation used to draw the actor, which will lag behind the actual
 	// rotation in order to show smooth rotation
 	float DrawRadians;
@@ -213,6 +221,9 @@ extern CArray gActors; // of TActor
 void UpdateActorState(TActor *actor, int ticks);
 void ActorMove(const NActorMove am);
 int CommandActor(TActor *actor, int cmd, int ticks);
+// The angle the actor shoots and turns towards: the analog aim when valid,
+// otherwise the classic 8-way direction
+float ActorGetAimRadians(const TActor *a);
 void SlideActor(TActor *actor, int cmd);
 void UpdateAllActors(const int ticks);
 void ActorsPilotVehicles(void);

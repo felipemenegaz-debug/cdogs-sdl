@@ -533,6 +533,11 @@ static GameLoopResult RunGameUpdate(GameLoopData *data, LoopRunner *l)
 			{
 				rData->cmds[idx] = AICoopGetCmd(player, ticksPerFrame);
 			}
+			// Analog stick: free movement and aim; keyboard/AI stay 8-way
+			player->AnalogMove =
+				p->inputDevice == INPUT_DEVICE_JOYSTICK
+					? JoyGetMove((SDL_JoystickID)p->deviceIndex)
+					: svec2_zero();
 			PlayerSpecialCommands(player, rData->cmds[idx]);
 			rData->cmds[idx] =
 				CommandActor(player, rData->cmds[idx], ticksPerFrame);

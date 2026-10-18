@@ -28,6 +28,7 @@
 */
 #include "joystick.h"
 
+#include <math.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -247,6 +248,71 @@ int ControllerButtonToCmd(const Uint8 button)
 	}
 }
 #define DEADZONE 16384
+// Analog stick tuning
+// Radial dead zone as a fraction of full deflection
+#define STICK_DEADZONE 0.25f
+// sin(22.5 deg): splits the circle into 8 equal sectors for the digital bits
+#define STICK_SECTOR_EDGE 0.38268343f
+// Quantisation: 128 aim angles (~2.8 deg) and 8 speed levels
+#define STICK_ANGLE_STEPS 128
+#define STICK_SPEED_STEPS 8
+
+static float AxisToUnit(const Sint16 v)
+{
+	const float f = (float)v / 32767.0f;
+	return f < -1.0f ? -1.0f : (f > 1.0f ? 1.0f : f);
+}
+
+static struct vec2 ReadLeftStick(const Joystick *j)
+{
+	const float x =
+		AxisToUnit(SDL_GameControllerGetAxis(j->gc, SDL_CONTROLLER_AXIS_LEFTX));
+	const float y =
+		AxisToUnit(SDL_GameControllerGetAxis(j->gc, SDL_CONTROLLER_AXIS_LEFTY));
+	const float mag = sqrtf(x * x + y * y);
+	if (mag <= STICK_DEADZONE)
+	{
+		return svec2_zero();
+	}
+	// Rescale so speed ramps smoothly from just outside the dead zone
+	float m = (mag - STICK_DEADZONE) / (1.0f - STICK_DEADZONE);
+	if (m > 1.0f)
+	{
+		m = 1.0f;
+	}
+	// Round up so the slowest level is still movement, never zero
+	m = ceilf(m * STICK_SPEED_STEPS) / STICK_SPEED_STEPS;
+	const float step = 2.0f * (float)MPI / STICK_ANGLE_STEPS;
+	const float a = roundf(atan2f(y, x) / step) * step;
+	return svec2(cosf(a) * m, sinf(a) * m);
+}
+
+static void JoyOnLeftStick(Joystick *j)
+{
+	// Derive the digital direction bits from the same vector the actor
+	// moves with, so menus, the AI and the network keep working and the
+	// 8-way facing always agrees with the analog angle.
+	const struct vec2 v = ReadLeftStick(j);
+	const float edge = STICK_SECTOR_EDGE * svec2_length(v);
+	const bool active = !svec2_is_zero(v);
+	JoyOnCmd(j, CMD_LEFT, active && v.x < -edge);
+	JoyOnCmd(j, CMD_RIGHT, active && v.x > edge);
+	JoyOnCmd(j, CMD_UP, active && v.y < -edge);
+	JoyOnCmd(j, CMD_DOWN, active && v.y > edge);
+}
+
+struct vec2 JoyGetMove(const SDL_JoystickID id)
+{
+	const Joystick *j = GetJoystick(id);
+	// No stick direction held (or held directions are locked after a
+	// menu): fall back to the digital commands
+	if (j == NULL || !(j->currentCmd & ~j->lockedCmd & CMD_DIRECTIONS))
+	{
+		return svec2_zero();
+	}
+	return ReadLeftStick(j);
+}
+
 void JoyOnAxis(const SDL_ControllerAxisEvent e)
 {
 	LOG(LM_INPUT, LL_DEBUG, "Joystick %d received axis %d, %d",
@@ -255,12 +321,8 @@ void JoyOnAxis(const SDL_ControllerAxisEvent e)
 	switch (e.axis)
 	{
 	case SDL_CONTROLLER_AXIS_LEFTX:
-		JoyOnCmd(j, CMD_LEFT, e.value < -DEADZONE);
-		JoyOnCmd(j, CMD_RIGHT, e.value > DEADZONE);
-		break;
 	case SDL_CONTROLLER_AXIS_LEFTY:
-		JoyOnCmd(j, CMD_UP, e.value < -DEADZONE);
-		JoyOnCmd(j, CMD_DOWN, e.value > DEADZONE);
+		JoyOnLeftStick(j);
 		break;
 	case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
 		// Right trigger fire

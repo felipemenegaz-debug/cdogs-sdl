@@ -36,6 +36,7 @@
 
 #include "c_array.h"
 #include "color.h"
+#include "vector.h"
 
 
 typedef struct
@@ -69,6 +70,11 @@ void JoyRemoved(const Sint32 which);
 void JoyOnButtonDown(const SDL_ControllerButtonEvent e);
 void JoyOnButtonUp(const SDL_ControllerButtonEvent e);
 void JoyOnAxis(const SDL_ControllerAxisEvent e);
+
+// Analog left-stick vector, x right / y down, length in [0, 1].
+// Zero inside the dead zone or when the stick's directions are locked.
+// Quantised so tiny stick wobble does not flood the network with events.
+struct vec2 JoyGetMove(const SDL_JoystickID id);
 
 void JoyRumble(
 	const SDL_JoystickID id, const float strength, const Uint32 length);

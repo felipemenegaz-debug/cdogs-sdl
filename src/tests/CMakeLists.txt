@@ -42,6 +42,18 @@ target_link_libraries(actor_test
 	SDL2::SDL2
 	${EXTRA_LIBRARIES})
 add_test(NAME actor_test COMMAND actor_test)
+
+add_executable(analog_input_test
+	analog_input_test.c
+	../cdogs/actors.h
+	../cdogs/actors.c)
+target_link_libraries(analog_input_test
+	cbehave
+	cdogs
+	cdogs_proto
+	SDL2::SDL2
+	${EXTRA_LIBRARIES})
+add_test(NAME analog_input_test COMMAND analog_input_test)
 if(APPLE)
 	set_target_properties(actor_test PROPERTIES
 		MACOSX_RPATH 1

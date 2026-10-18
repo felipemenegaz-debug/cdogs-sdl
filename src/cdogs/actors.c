@@ -255,7 +255,7 @@ void UpdateActorState(TActor *actor, int ticks)
 	}
 
 	// Draw rotation interpolation
-	const float targetRadians = (float)dir2radians[actor->direction];
+	const float targetRadians = ActorGetAimRadians(actor);
 	if (actor->DrawRadians - targetRadians > MPI)
 	{
 		actor->DrawRadians -= 2 * MPI;
@@ -1067,6 +1067,18 @@ static void FireWeapon(TActor *a, Weapon *w)
 	}
 }
 
+float ActorGetAimRadians(const TActor *a)
+{
+	// Trust the analog angle only while it still matches the 8-way facing;
+	// anything else that turns the actor (AI, network, scripted events)
+	// changes `direction` and thereby falls back to the classic angle.
+	if (a->HasAnalogAim && RadiansToDirection(a->AimRadians) == a->direction)
+	{
+		return a->AimRadians;
+	}
+	return (float)dir2radians[a->direction];
+}
+
 static bool ActorTryChangeDirection(
 	TActor *actor, const int cmd, const int prevCmd)
 {
@@ -1076,7 +1088,27 @@ static bool ActorTryChangeDirection(
 							  SWITCHMOVE_STRAFE) &&
 		(!Button1(prevCmd) ||
 		 ConfigGetEnum(&gConfig, "Game.FireMoveStyle") != FIREMOVE_STRAFE);
-	const direction_e dir = CmdToDirection(cmd);
+	direction_e dir = CmdToDirection(cmd);
+	if (willChangeDirecton)
+	{
+		if (!svec2_is_zero(actor->AnalogMove))
+		{
+			// Same convention as dir2radians: 0 = up, clockwise
+			float r = atan2f(actor->AnalogMove.x, -actor->AnalogMove.y);
+			if (r < 0)
+			{
+				r += 2 * (float)MPI;
+			}
+			actor->AimRadians = r;
+			actor->HasAnalogAim = true;
+			// The sprite still uses the nearest of the 8 directions
+			dir = RadiansToDirection(r);
+		}
+		else
+		{
+			actor->HasAnalogAim = false;
+		}
+	}
 	if (willChangeDirecton && dir != actor->direction)
 	{
 		GameEvent e = GameEventNew(GAME_EVENT_ACTOR_DIR);
@@ -1196,6 +1228,7 @@ int CommandActor(TActor *actor, int cmd, int ticks)
 		if (actor->vehicleUID != -1)
 		{
 			TActor *vehicle = ActorGetByUID(actor->vehicleUID);
+			vehicle->AnalogMove = actor->AnalogMove;
 			CommandActor(vehicle, cmd, ticks);
 		}
 		else if (actor->pilotUID == -1)
@@ -1208,6 +1241,7 @@ int CommandActor(TActor *actor, int cmd, int ticks)
 			if (actor->confused)
 			{
 				cmd = CmdGetReverse(cmd);
+				actor->AnalogMove = svec2_scale(actor->AnalogMove, -1);
 			}
 
 			if (actor->health > 0)
@@ -1275,26 +1309,42 @@ static bool ActorTryMove(TActor *actor, int cmd, int ticks)
 	const bool willMove =
 		!actor->petrified && CMD_HAS_DIRECTION(cmd) && canMove;
 	actor->MoveVel = svec2_zero();
+	const bool isAnalog = !svec2_is_zero(actor->AnalogMove);
 	if (willMove)
 	{
 		const float moveAmount = ActorGetCharacter(actor)->speed * ticks;
-		struct vec2 moveVel = svec2_zero();
-		if (Left(cmd))
-			moveVel.x--;
-		else if (Right(cmd))
-			moveVel.x++;
-		if (Up(cmd))
-			moveVel.y--;
-		else if (Down(cmd))
-			moveVel.y++;
-		if (!svec2_is_zero(moveVel))
+		if (isAnalog)
 		{
-			actor->MoveVel = svec2_scale(svec2_normalize(moveVel), moveAmount);
+			// Any angle; speed follows how far the stick is pushed
+			actor->MoveVel = svec2_scale(actor->AnalogMove, moveAmount);
+		}
+		else
+		{
+			struct vec2 moveVel = svec2_zero();
+			if (Left(cmd))
+				moveVel.x--;
+			else if (Right(cmd))
+				moveVel.x++;
+			if (Up(cmd))
+				moveVel.y--;
+			else if (Down(cmd))
+				moveVel.y++;
+			if (!svec2_is_zero(moveVel))
+			{
+				actor->MoveVel =
+					svec2_scale(svec2_normalize(moveVel), moveAmount);
+			}
 		}
 	}
 
+	// The stick can change angle without changing the 8-way command bits,
+	// so also resend when the (quantised) analog vector changes
+	const bool analogChanged =
+		!svec2_is_equal(actor->AnalogMove, actor->lastAnalogMove);
+	actor->lastAnalogMove = actor->AnalogMove;
+
 	// If we have changed our move commands, send the move event
-	if (cmd != actor->lastCmd || actor->hasCollided)
+	if (cmd != actor->lastCmd || actor->hasCollided || analogChanged)
 	{
 		GameEvent e = GameEventNew(GAME_EVENT_ACTOR_MOVE);
 		e.u.ActorMove.UID = actor->uid;

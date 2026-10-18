@@ -47,7 +47,7 @@ void ActorFireBarrel(Weapon *w, const TActor *a, const int barrel)
 		return;
 	}
 
-	const double radians = dir2radians[a->direction];
+	const double radians = ActorGetAimRadians(a);
 	const struct vec2 muzzleOffset = ActorGetMuzzleOffset(a, w, barrel);
 	const struct vec2 muzzlePosition = svec2_add(a->Pos, muzzleOffset);
 	const bool playSound = w->barrels[barrel].soundLock <= 0;
