@@ -30,7 +30,9 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include "actors.h"
 #include "config.h"
 #include "door.h"
 #include "draw/draw.h"
@@ -39,6 +41,8 @@
 #include "log.h"
 #include "los.h"
 #include "map.h"
+#include "objs.h"
+#include "particle.h"
 #include "thing.h"
 
 #if SDL_VERSION_ATLEAST(2, 0, 18)
@@ -92,6 +96,32 @@ static CArray sAbove;  // of ThingEntry
 static CArray sDoors;  // of DoorEntry
 static bool sArraysInit = false;
 
+// Lighting (Graphics.Lights): a cool, dim ambient and warm point lights from
+// the players, shots, muzzle flashes, explosions and fire, applied as vertex
+// colours. Vertex colours can only darken the art, so the ambient is below 1
+// and lights bring the colour back up to the original. Lights with Glow also
+// add a soft splash of light on the floor (additive), which is what makes a
+// shot or an explosion read on a dark floor.
+typedef struct
+{
+	struct vec2 Pos;
+	float Radius;
+	float R, G, B;
+	float Glow;
+} Light;
+#define MAX_LIGHTS 128
+static Light sLights[MAX_LIGHTS];
+static int sNumLights = 0;
+static bool sLighting = false;
+static const float sAmbient[3] = {0.62f, 0.64f, 0.78f};
+// Under lighting, fogged (seen but out of sight) tiles keep this much light
+#define FOG_LIT 0.5f
+#define GLOW_SIZE 64
+static SDL_Texture *sGlow = NULL;
+static bool sGlowFailed = false;
+// Set while drawing things that must keep their own colour
+static bool sUnlit = false;
+
 bool Draw25DIsSupported(void)
 {
 	return HAS_GEOMETRY;
@@ -102,6 +132,49 @@ void Draw25DResetTextures(void)
 	// Textures are freed together with their renderer
 	sAtlas = NULL;
 	sAtlasFailed = false;
+	sGlow = NULL;
+	sGlowFailed = false;
+}
+
+// A round, soft white spot for the light splashes on the floor
+static bool EnsureGlow(SDL_Renderer *r)
+{
+	if (sGlow != NULL)
+	{
+		return true;
+	}
+	if (sGlowFailed)
+	{
+		return false;
+	}
+	sGlow = SDL_CreateTexture(
+		r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, GLOW_SIZE,
+		GLOW_SIZE);
+	if (sGlow == NULL)
+	{
+		LOG(LM_GFX, LL_ERROR, "cannot create 2.5D glow: %s", SDL_GetError());
+		sGlowFailed = true;
+		return false;
+	}
+	Uint32 px[GLOW_SIZE * GLOW_SIZE];
+	for (int y = 0; y < GLOW_SIZE; y++)
+	{
+		for (int x = 0; x < GLOW_SIZE; x++)
+		{
+			const float dx = (x + 0.5f) / GLOW_SIZE * 2 - 1;
+			const float dy = (y + 0.5f) / GLOW_SIZE * 2 - 1;
+			float f = 1.0f - (dx * dx + dy * dy);
+			f = f > 0 ? f * f : 0;
+			const Uint32 v = (Uint32)(f * 255);
+			px[y * GLOW_SIZE + x] = 0xFF000000u | v << 16 | v << 8 | v;
+		}
+	}
+	SDL_UpdateTexture(sGlow, NULL, px, GLOW_SIZE * sizeof(Uint32));
+	SDL_SetTextureBlendMode(sGlow, SDL_BLENDMODE_ADD);
+#if SDL_VERSION_ATLEAST(2, 0, 12)
+	SDL_SetTextureScaleMode(sGlow, SDL_ScaleModeLinear);
+#endif
+	return true;
 }
 
 static bool EnsureAtlas(SDL_Renderer *r)
@@ -191,12 +264,126 @@ static Point3 Lerp3(const Point3 a, const Point3 b, const float t)
 	return p;
 }
 
+static void AddLight(
+	const struct vec2 pos, const float radius, const float r, const float g,
+	const float b, const float glow)
+{
+	if (sNumLights >= MAX_LIGHTS)
+	{
+		return;
+	}
+	Light *l = &sLights[sNumLights++];
+	l->Pos = pos;
+	l->Radius = radius;
+	l->R = r;
+	l->G = g;
+	l->B = b;
+	l->Glow = glow;
+}
+
+static bool NameStarts(const char *name, const char *prefix)
+{
+	return name != NULL && strncmp(name, prefix, strlen(prefix)) == 0;
+}
+
+// Lights given off by a thing, by kind and particle class name
+static void AddThingLight(const Thing *t)
+{
+	const struct vec2 pos = t->Pos;
+	switch (t->kind)
+	{
+	case KIND_CHARACTER: {
+		const TActor *a = CArrayGet(&gActors, t->id);
+		if (a->PlayerUID >= 0 && !a->dead)
+		{
+			AddLight(pos, 7 * TILE_WIDTH, 0.5f, 0.46f, 0.38f, 0.1f);
+		}
+		break;
+	}
+	case KIND_MOBILEOBJECT:
+		AddLight(pos, 2 * TILE_WIDTH, 0.35f, 0.3f, 0.22f, 0.18f);
+		break;
+	case KIND_PARTICLE: {
+		const Particle *pa = CArrayGet(&gParticles, t->id);
+		const char *name = pa->Class != NULL ? pa->Class->Name : NULL;
+		if (NameStarts(name, "muzzle_flash"))
+		{
+			AddLight(pos, 3 * TILE_WIDTH, 0.9f, 0.75f, 0.45f, 0.6f);
+		}
+		else if (
+			NameStarts(name, "boom") || NameStarts(name, "explosion") ||
+			NameStarts(name, "fireball"))
+		{
+			AddLight(pos, 5 * TILE_WIDTH, 1.0f, 0.6f, 0.3f, 0.7f);
+		}
+		else if (NameStarts(name, "flame"))
+		{
+			AddLight(pos, 3 * TILE_WIDTH, 0.7f, 0.4f, 0.15f, 0.45f);
+		}
+		else if (NameStarts(name, "spark"))
+		{
+			AddLight(pos, TILE_WIDTH, 0.4f, 0.35f, 0.25f, 0.3f);
+		}
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+// Light reaching a world point, as a colour multiplier (0..1 per channel)
+static void LightAt(const struct vec2 w, float out[3])
+{
+	if (!sLighting || sUnlit)
+	{
+		out[0] = out[1] = out[2] = 1.0f;
+		return;
+	}
+	out[0] = sAmbient[0];
+	out[1] = sAmbient[1];
+	out[2] = sAmbient[2];
+	for (int i = 0; i < sNumLights; i++)
+	{
+		const Light *l = &sLights[i];
+		const float dx = w.x - l->Pos.x;
+		// Map y is foreshortened (12px tiles for 16px of ground)
+		const float dy = (w.y - l->Pos.y) * TILE_WIDTH / TILE_HEIGHT;
+		const float d2 = dx * dx + dy * dy;
+		const float r2 = l->Radius * l->Radius;
+		if (d2 >= r2)
+		{
+			continue;
+		}
+		// Smooth falloff: full at the centre, zero at the radius
+		const float f = 1.0f - d2 / r2;
+		out[0] += l->R * f * f;
+		out[1] += l->G * f * f;
+		out[2] += l->B * f * f;
+	}
+	for (int i = 0; i < 3; i++)
+	{
+		out[i] = MIN(out[i], 1.0f);
+	}
+}
+
+static SDL_Color LitColor(
+	const SDL_Color base, const struct vec2 w, const float shade)
+{
+	float l[3];
+	LightAt(w, l);
+	SDL_Color c = {
+		(Uint8)(base.r * l[0] * shade), (Uint8)(base.g * l[1] * shade),
+		(Uint8)(base.b * l[2] * shade), base.a};
+	return c;
+}
+
 // Draw a planar quad in the world, corners in order top-left, top-right,
-// bottom-right, bottom-left of the texture region uv0..uv1
+// bottom-right, bottom-left of the texture region uv0..uv1. corner, if not
+// NULL, is a shade per corner, blended across the quad; every vertex is lit.
 static void DrawQuad3D(
 	SDL_Renderer *r, SDL_Texture *tex, const DrawPerspective *p,
 	const Point3 c[4], const struct vec2 uv0, const struct vec2 uv1,
-	const SDL_Color color)
+	const SDL_Color color, const float *corner)
 {
 #if HAS_GEOMETRY
 	SDL_Vertex v[(QUAD_SUBDIV + 1) * (QUAD_SUBDIV + 1)];
@@ -217,7 +404,14 @@ static void DrawQuad3D(
 			SDL_Vertex *vx = &v[j * (QUAD_SUBDIV + 1) + i];
 			vx->position.x = s.x;
 			vx->position.y = s.y;
-			vx->color = color;
+			float shade = 1.0f;
+			if (corner != NULL)
+			{
+				const float top = corner[0] + (corner[1] - corner[0]) * fx;
+				const float bottom = corner[3] + (corner[2] - corner[3]) * fx;
+				shade = top + (bottom - top) * fy;
+			}
+			vx->color = LitColor(color, pt.w, shade);
 			vx->tex_coord.x = uv0.x + (uv1.x - uv0.x) * fx;
 			vx->tex_coord.y = uv0.y + (uv1.y - uv0.y) * fy;
 		}
@@ -249,6 +443,7 @@ static void DrawQuad3D(
 	UNUSED(uv0);
 	UNUSED(uv1);
 	UNUSED(color);
+	UNUSED(corner);
 #endif
 }
 
@@ -262,6 +457,35 @@ static void PrepareTexture(SDL_Texture *tex)
 static struct vec2 TileWorldPos(const int x, const int y)
 {
 	return svec2((float)(x * TILE_WIDTH), (float)(y * TILE_HEIGHT));
+}
+
+static bool IsSolid(const Map *map, const struct vec2i pos)
+{
+	if (!MapIsTileIn(map, pos))
+	{
+		return true;
+	}
+	const Tile *t = MapGetTile(map, pos);
+	return t->Class != NULL && t->Class->Type == TILE_CLASS_WALL;
+}
+
+// How much a tile is seen: 1 in sight, the fog level, 0 never seen
+static float TileSeen(const struct vec2i pos, const bool useFog)
+{
+	if (!MapIsTileIn(&gMap, pos))
+	{
+		return 0;
+	}
+	const color_t mask = DrawTileLOSMask(MapGetTile(&gMap, pos), useFog);
+	if (ColorEquals(mask, colorTransparent))
+	{
+		return 0;
+	}
+	if (ColorEquals(mask, colorWhite))
+	{
+		return 1;
+	}
+	return sLighting ? FOG_LIT : mask.r / 255.0f;
 }
 
 static void DrawFloorTile(
@@ -283,19 +507,34 @@ static void DrawFloorTile(
 	const Point3 c[4] = {
 		{w0, 0}, {svec2(w1.x, w0.y), 0}, {w1, 0}, {svec2(w0.x, w1.y), 0}};
 	PrepareTexture(t->Class->Pic->Tex);
+	// Each corner takes the average of the floor tiles around it, so the
+	// edge of what is in sight fades over a tile instead of stepping. Walls
+	// are left out of the average, or rooms would get dark rims along them.
+	float corner[4];
+	const struct vec2i cornerTile[4] = {
+		pos, svec2i(pos.x + 1, pos.y), svec2i(pos.x + 1, pos.y + 1),
+		svec2i(pos.x, pos.y + 1)};
+	for (int i = 0; i < 4; i++)
+	{
+		const struct vec2i k = cornerTile[i];
+		const struct vec2i around[4] = {
+			svec2i(k.x - 1, k.y - 1), svec2i(k.x, k.y - 1),
+			svec2i(k.x - 1, k.y), k};
+		float sum = 0;
+		int n = 0;
+		for (int j = 0; j < 4; j++)
+		{
+			if (!IsSolid(&gMap, around[j]))
+			{
+				sum += TileSeen(around[j], useFog);
+				n++;
+			}
+		}
+		corner[i] = n > 0 ? sum / n : TileSeen(pos, useFog);
+	}
 	DrawQuad3D(
 		r, t->Class->Pic->Tex, p, c, svec2_zero(), svec2_one(),
-		ToSDLColor(mask, 1.0f));
-}
-
-static bool IsSolid(const Map *map, const struct vec2i pos)
-{
-	if (!MapIsTileIn(map, pos))
-	{
-		return true;
-	}
-	const Tile *t = MapGetTile(map, pos);
-	return t->Class != NULL && t->Class->Type == TILE_CLASS_WALL;
+		ToSDLColor(colorWhite, 1.0f), corner);
 }
 
 // Draw a box occupying a whole tile: the texture holds the top face in its
@@ -324,7 +563,7 @@ static void DrawBox(
 				{svec2(w1.x, w0.y), 0},
 				{svec2(w1.x, w1.y), 0}};
 			DrawQuad3D(
-				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE));
+				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE), NULL);
 		}
 		if (sides && !IsSolid(&gMap, svec2i(pos.x - 1, pos.y)) &&
 			w0.x > p->Focus.x)
@@ -335,7 +574,7 @@ static void DrawBox(
 				{svec2(w0.x, w1.y), 0},
 				{svec2(w0.x, w0.y), 0}};
 			DrawQuad3D(
-				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE));
+				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_SIDE), NULL);
 		}
 		if (!sides || !IsSolid(&gMap, svec2i(pos.x, pos.y + 1)))
 		{
@@ -345,7 +584,7 @@ static void DrawBox(
 				{svec2(w1.x, w1.y), 0},
 				{svec2(w0.x, w1.y), 0}};
 			DrawQuad3D(
-				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_FRONT));
+				r, tex, p, c, frontUV0, uv1, ToSDLColor(mask, SHADE_FRONT), NULL);
 		}
 	}
 
@@ -354,7 +593,8 @@ static void DrawBox(
 		{svec2(w1.x, w0.y), WALL_H},
 		{w1, WALL_H},
 		{svec2(w0.x, w1.y), WALL_H}};
-	DrawQuad3D(r, tex, p, top, uv0, svec2(uv1.x, vMid), ToSDLColor(mask, 1.0f));
+	DrawQuad3D(
+		r, tex, p, top, uv0, svec2(uv1.x, vMid), ToSDLColor(mask, 1.0f), NULL);
 }
 
 static void DrawWallTile(
@@ -412,7 +652,8 @@ static void CellUV(const int cell, struct vec2 *uv0, struct vec2 *uv1)
 }
 
 static void DrawBillboard(
-	SDL_Renderer *r, const DrawPerspective *p, const ThingEntry *e)
+	SDL_Renderer *r, const DrawPerspective *p, const ThingEntry *e,
+	const bool lit)
 {
 	const struct vec2 pos = ThingDrawPos(e->t);
 	if (e->cell < 0)
@@ -436,6 +677,14 @@ static void DrawBillboard(
 		svec2(-CELL_ANCHOR_X, CELL_H - CELL_ANCHOR_Y)};
 	const struct vec2 uv[4] = {
 		uv0, svec2(uv1.x, uv0.y), uv1, svec2(uv0.x, uv1.y)};
+	// Lit where it stands; things that give off light are drawn unlit
+	const int lightsBefore = sNumLights;
+	AddThingLight(e->t);
+	const bool emits = sNumLights > lightsBefore;
+	sNumLights = lightsBefore;
+	const SDL_Color white = ToSDLColor(colorWhite, 1.0f);
+	const SDL_Color color =
+		emits || !lit ? white : LitColor(white, pos, 1.0f);
 	SDL_Vertex v[4];
 	for (int i = 0; i < 4; i++)
 	{
@@ -446,7 +695,7 @@ static void DrawBillboard(
 		}
 		v[i].position.x = s.x;
 		v[i].position.y = s.y;
-		v[i].color = ToSDLColor(colorWhite, 1.0f);
+		v[i].color = color;
 		v[i].tex_coord.x = uv[i].x;
 		v[i].tex_coord.y = uv[i].y;
 	}
@@ -469,7 +718,7 @@ static void DrawDecal(
 {
 	if (e->cell < 0)
 	{
-		DrawBillboard(r, p, e);
+		DrawBillboard(r, p, e, true);
 		return;
 	}
 	// Things lying on the floor (wrecks, debris) become ground quads
@@ -483,7 +732,39 @@ static void DrawDecal(
 	const Point3 c[4] = {
 		{svec2(x0, y0), 0}, {svec2(x1, y0), 0}, {svec2(x1, y1), 0},
 		{svec2(x0, y1), 0}};
-	DrawQuad3D(r, sAtlas, p, c, uv0, uv1, ToSDLColor(colorWhite, 1.0f));
+	DrawQuad3D(r, sAtlas, p, c, uv0, uv1, ToSDLColor(colorWhite, 1.0f), NULL);
+}
+
+// Soft splashes of light on the floor, added on top of it; walls drawn
+// afterwards cover the ones behind them
+static void DrawGlows(SDL_Renderer *r, const DrawPerspective *p)
+{
+	if (!sLighting || sNumLights == 0 || !EnsureGlow(r))
+	{
+		return;
+	}
+	sUnlit = true;
+	for (int i = 0; i < sNumLights; i++)
+	{
+		const Light *l = &sLights[i];
+		if (l->Glow <= 0)
+		{
+			continue;
+		}
+		const float rx = l->Radius;
+		const float ry = l->Radius * TILE_HEIGHT / TILE_WIDTH;
+		const Point3 c[4] = {
+			{svec2(l->Pos.x - rx, l->Pos.y - ry), 0},
+			{svec2(l->Pos.x + rx, l->Pos.y - ry), 0},
+			{svec2(l->Pos.x + rx, l->Pos.y + ry), 0},
+			{svec2(l->Pos.x - rx, l->Pos.y + ry), 0}};
+		const SDL_Color color = {
+			(Uint8)(MIN(l->R * l->Glow, 1.0f) * 255),
+			(Uint8)(MIN(l->G * l->Glow, 1.0f) * 255),
+			(Uint8)(MIN(l->B * l->Glow, 1.0f) * 255), 255};
+		DrawQuad3D(r, sGlow, p, c, svec2_zero(), svec2_one(), color, NULL);
+	}
+	sUnlit = false;
 }
 
 static int CompareThingEntries(const void *v1, const void *v2)
@@ -574,6 +855,7 @@ static void CollectThings(
 			}
 			CA_FOREACH(ThingId, tid, tile->things)
 			ThingEntry e = {ThingIdGetThing(tid), pos.y, -1};
+			AddThingLight(e.t);
 			if (*numCells < MAX_CELLS)
 			{
 				e.cell = (*numCells)++;
@@ -702,6 +984,8 @@ void Draw25DWorld(
 		return;
 	}
 
+	sLighting = ConfigGetBool(&gConfig, "Graphics.Lights");
+	sNumLights = 0;
 	int numCells = 0;
 	CollectThings(t0, t1, &numCells);
 	if (!EnsureAtlas(r))
@@ -725,6 +1009,7 @@ void Draw25DWorld(
 	CA_FOREACH(const ThingEntry, e, sBelow)
 	DrawDecal(r, p, e);
 	CA_FOREACH_END()
+	DrawGlows(r, p);
 
 	// Then back to front, row by row. Within a row, walls go from the sides
 	// in towards the focus column so their side faces overlap correctly,
@@ -768,13 +1053,14 @@ void Draw25DWorld(
 			{
 				break;
 			}
-			DrawBillboard(r, p, e);
+			DrawBillboard(r, p, e, true);
 			nextThing++;
 		}
 	}
 
 	PrepareTexture(sAtlas);
+	// Texts and markers drawn above everything keep their colours
 	CA_FOREACH(const ThingEntry, e, sAbove)
-	DrawBillboard(r, p, e);
+	DrawBillboard(r, p, e, false);
 	CA_FOREACH_END()
 }

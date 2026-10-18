@@ -671,6 +671,8 @@ Config ConfigDefault(void)
 				  SCALE_MODE_BILINEAR, StrScaleMode, ScaleModeStr));
 	ConfigGroupAdd(&gfx, ConfigNewBool("Shadows", true));
 	ConfigGroupAdd(&gfx, ConfigNewBool("Perspective", false));
+	// Light and shade in the 2.5D view (Perspective)
+	ConfigGroupAdd(&gfx, ConfigNewBool("Lights", true));
 	// High-res art and rendering; takes effect on restart
 	ConfigGroupAdd(&gfx, ConfigNewBool("HD", false));
 	ConfigGroupAdd(
