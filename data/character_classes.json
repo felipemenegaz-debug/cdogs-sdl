@@ -119,6 +119,19 @@
       "HasFacehair": false,
       "HasHat": false,
       "HasGlasses": false
+    },
+    {
+      "Name": "Pintado",
+      "HeadPics": {
+        "Type": "Directional",
+        "Sprites": "chars/heads/pintado"
+      },
+      "Body": "pintado",
+      "Sounds": "man",
+      "HasHair": false,
+      "HasFacehair": false,
+      "HasHat": false,
+      "HasGlasses": false
     }
   ]
 }

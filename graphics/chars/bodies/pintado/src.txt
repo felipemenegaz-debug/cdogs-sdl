@@ -1,0 +1,3 @@
+Original art made for the R.E.A remaster: the painted character (rea-art,
+blender_painted.py) rendered by rea_art/blender_cdogs_body.py and
+rea_art/cdogs_body.py. No pixels from other sources.
