@@ -141,6 +141,7 @@ static menu_t *MenuCreateOptionsGraphics(
 		menu, ConfigGet(data->config, "Graphics.Shadows"));
 	MenuAddConfigOptionsItem(
 		menu, ConfigGet(data->config, "Graphics.Perspective"));
+	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.HD"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.Gore"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.Brass"));
 	MenuAddSubmenu(menu, MenuCreateSeparator(""));

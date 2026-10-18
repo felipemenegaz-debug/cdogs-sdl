@@ -223,11 +223,11 @@ static void LoadArchiveSounds(
 static void LoadArchivePics(PicManager *pm, map_t cc, const char *archive)
 {
 	char path[CDOGS_PATH_MAX];
-	sprintf(path, "%s/graphics", archive);
-	PicManagerLoadDir(
-		pm, path, NULL, pm->customPics, pm->customSprites, false);
+	// High-res first; the first image loaded for a name wins
 	sprintf(path, "%s/graphics_hd", archive);
-	PicManagerLoadDir(pm, path, NULL, pm->customPics, pm->customSprites, true);
+	PicManagerLoadDir(pm, path, NULL, pm->customPics, pm->customSprites, 2);
+	sprintf(path, "%s/graphics", archive);
+	PicManagerLoadDir(pm, path, NULL, pm->customPics, pm->customSprites, 1);
 	CharSpriteClassesLoadDir(cc, archive);
 }
 

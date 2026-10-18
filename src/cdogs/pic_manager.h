@@ -52,7 +52,7 @@ void PicManagerInit(PicManager *pm);
 void PicManagerLoad(PicManager *pm);
 void PicManagerLoadDir(
 	PicManager *pm, const char *path, const char *prefix,
-	map_t pics, map_t sprites, const bool isHD);
+	map_t pics, map_t sprites, const int scale);
 void PicManagerClearCustom(PicManager *pm);
 void PicManagerTerminate(PicManager *pm);
 void PicManagerReloadTextures(PicManager *pm);

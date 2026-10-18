@@ -48,7 +48,8 @@
 #endif
 
 // Things are first drawn with their classic code into cells of an atlas
-// texture, then each cell is drawn as a billboard (or a ground decal)
+// texture, then each cell is drawn as a billboard (or a ground decal).
+// Sizes are logical pixels; the texture has render scale times as many.
 #define ATLAS_SIZE 1024
 #define CELL_W 64
 #define CELL_H 64
@@ -83,6 +84,7 @@ typedef struct
 } DoorEntry;
 
 static SDL_Texture *sAtlas = NULL;
+static int sAtlasScale = 0;
 static bool sAtlasFailed = false;
 static CArray sBelow;  // of ThingEntry
 static CArray sNormal; // of ThingEntry
@@ -104,6 +106,13 @@ void Draw25DResetTextures(void)
 
 static bool EnsureAtlas(SDL_Renderer *r)
 {
+	const int scale = gGraphicsDevice.gameWindow.renderScale;
+	if (sAtlas != NULL && sAtlasScale != scale)
+	{
+		SDL_DestroyTexture(sAtlas);
+		sAtlas = NULL;
+		sAtlasFailed = false;
+	}
 	if (sAtlas != NULL)
 	{
 		return true;
@@ -113,8 +122,8 @@ static bool EnsureAtlas(SDL_Renderer *r)
 		return false;
 	}
 	sAtlas = SDL_CreateTexture(
-		r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, ATLAS_SIZE,
-		ATLAS_SIZE);
+		r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
+		ATLAS_SIZE * scale, ATLAS_SIZE * scale);
 	if (sAtlas == NULL)
 	{
 		LOG(LM_GFX, LL_ERROR, "cannot create 2.5D atlas: %s", SDL_GetError());
@@ -131,6 +140,13 @@ static bool EnsureAtlas(SDL_Renderer *r)
 	{
 		SDL_SetTextureBlendMode(sAtlas, SDL_BLENDMODE_BLEND);
 	}
+#if SDL_VERSION_ATLEAST(2, 0, 12)
+	if (scale > 1)
+	{
+		SDL_SetTextureScaleMode(sAtlas, SDL_ScaleModeLinear);
+	}
+#endif
+	sAtlasScale = scale;
 	return true;
 }
 
@@ -596,12 +612,16 @@ static void RenderAtlas(SDL_Renderer *r)
 	const SDL_bool hadClip = SDL_RenderIsClipEnabled(r);
 	SDL_Rect prevClip;
 	SDL_RenderGetClipRect(r, &prevClip);
+	int logicalW, logicalH;
+	SDL_RenderGetLogicalSize(r, &logicalW, &logicalH);
 
 	if (SDL_SetRenderTarget(r, sAtlas) != 0)
 	{
 		LOG(LM_GFX, LL_ERROR, "cannot draw to 2.5D atlas: %s", SDL_GetError());
 		return;
 	}
+	// Draw in logical pixels, at the atlas' (high) resolution
+	SDL_RenderSetScale(r, (float)sAtlasScale, (float)sAtlasScale);
 	SDL_SetRenderDrawColor(r, 0, 0, 0, 0);
 	SDL_RenderClear(r);
 
@@ -635,6 +655,12 @@ static void RenderAtlas(SDL_Renderer *r)
 
 	SDL_RenderSetClipRect(r, NULL);
 	SDL_SetRenderTarget(r, prevTarget);
+	// Changing targets resets the scale; the logical size brings back the
+	// render scale of the final texture
+	if (logicalW > 0 && logicalH > 0)
+	{
+		SDL_RenderSetLogicalSize(r, logicalW, logicalH);
+	}
 	SDL_RenderSetClipRect(r, hadClip ? &prevClip : NULL);
 }
 

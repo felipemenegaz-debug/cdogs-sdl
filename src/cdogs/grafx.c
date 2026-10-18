@@ -74,12 +74,24 @@ void GraphicsInit(GraphicsDevice *device, Config *c)
 {
 	memset(device, 0, sizeof *device);
 	GraphicsConfigSetFromConfig(&device->cachedConfig, c);
+	device->HD = ConfigGetBool(c, "Graphics.HD");
 	device->cachedConfig.RestartFlags = RESTART_ALL;
 }
 
 // Initialises the video subsystem.
 // To prevent needless screen flickering, config is compared with cache
 // to see if anything changed. If not, don't recreate the screen.
+int GraphicsRenderScale(const GraphicsDevice *g)
+{
+	// In HD, draw at the window's resolution (up to the 4x of the art)
+	// instead of upscaling a low-res image
+	if (!g->HD)
+	{
+		return 1;
+	}
+	return MAX(1, MIN(g->cachedConfig.ScaleFactor, 4));
+}
+
 void GraphicsInitialize(GraphicsDevice *g)
 {
 	if (g->IsInitialized && !g->cachedConfig.RestartFlags)
@@ -137,7 +149,7 @@ void GraphicsInitialize(GraphicsDevice *g)
 			g->cachedConfig.IsEditor ? "Editor " : "", CDOGS_SDL_VERSION);
 		if (!WindowContextCreate(
 				&g->gameWindow, windowDim, windowFlags, title, g->icon,
-				svec2i(w, h)))
+				svec2i(w, h), GraphicsRenderScale(g)))
 		{
 			return;
 		}
@@ -145,7 +157,7 @@ void GraphicsInitialize(GraphicsDevice *g)
 		{
 			if (!WindowContextCreate(
 					&g->secondWindow, windowDim, windowFlags, title, g->icon,
-					svec2i(w, h)))
+					svec2i(w, h), GraphicsRenderScale(g)))
 			{
 				return;
 			}
@@ -165,8 +177,10 @@ void GraphicsInitialize(GraphicsDevice *g)
 		{
 			WindowContextDestroyTextures(&g->gameWindow);
 			WindowContextDestroyTextures(&g->secondWindow);
-			WindowContextInitTextures(&g->gameWindow, svec2i(w, h));
-			WindowContextInitTextures(&g->secondWindow, svec2i(w, h));
+			WindowContextInitTextures(
+				&g->gameWindow, svec2i(w, h), GraphicsRenderScale(g));
+			WindowContextInitTextures(
+				&g->secondWindow, svec2i(w, h), GraphicsRenderScale(g));
 		}
 
 		GraphicsResetClip(g->gameWindow.renderer);

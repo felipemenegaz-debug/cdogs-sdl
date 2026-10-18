@@ -222,6 +222,7 @@ install(DIRECTORY
 	${CMAKE_SOURCE_DIR}/missions
 	${CMAKE_SOURCE_DIR}/dogfights
 	${CMAKE_SOURCE_DIR}/graphics
+	${CMAKE_SOURCE_DIR}/graphics_4x
 	${CMAKE_SOURCE_DIR}/music
 	${CMAKE_SOURCE_DIR}/sounds
 	DESTINATION ${DATA_INSTALL_DIR}

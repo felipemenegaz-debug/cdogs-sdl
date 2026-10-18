@@ -651,6 +651,8 @@ Config ConfigDefault(void)
 				  SCALE_MODE_BILINEAR, StrScaleMode, ScaleModeStr));
 	ConfigGroupAdd(&gfx, ConfigNewBool("Shadows", true));
 	ConfigGroupAdd(&gfx, ConfigNewBool("Perspective", false));
+	// High-res art and rendering; takes effect on restart
+	ConfigGroupAdd(&gfx, ConfigNewBool("HD", false));
 	ConfigGroupAdd(
 		&gfx, ConfigNewEnum(
 				  "Gore", GORE_LOW, GORE_NONE, GORE_HIGH, StrGoreAmount,

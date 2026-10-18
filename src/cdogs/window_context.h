@@ -38,15 +38,18 @@ typedef struct
 	CArray textures;	// of SDL_Texture *
 	color_t bkgMask;
 	struct vec2i logicalSize;
+	// Pixels per logical pixel in the final texture; above 1 for HD
+	int renderScale;
 	SDL_Texture *final;
 } WindowContext;
 
 bool WindowContextCreate(
 	WindowContext *wc, const Rect2i windowDim, const int windowFlags,
 	const char *title, SDL_Surface *icon,
-	const struct vec2i rendererLogicalSize);
+	const struct vec2i rendererLogicalSize, const int renderScale);
 bool WindowContextInitTextures(
-	WindowContext *wc, const struct vec2i rendererLogicalSize);
+	WindowContext *wc, const struct vec2i rendererLogicalSize,
+	const int renderScale);
 void WindowContextDestroy(WindowContext *wc);
 void WindowContextDestroyTextures(WindowContext *wc);
 

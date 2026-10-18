@@ -33,7 +33,8 @@ typedef struct
 {
 	struct vec2i size;
 	struct vec2i offset;
-	bool isHD;
+	// Texture pixels per logical pixel: 1, or 2/4 for high-res art
+	int Scale;
 	Uint32 *Data;
 	SDL_Texture *Tex;
 } Pic;
@@ -49,8 +50,10 @@ Uint32 ColorToPixel(
 
 void PicLoad(
 	Pic *p, const struct vec2i size, const struct vec2i offset,
-	const SDL_Surface *image, const bool isHD);
+	const SDL_Surface *image, const int scale);
 bool PicTryMakeTex(Pic *p);
+// Size of the pixel data, which is size * Scale
+struct vec2i PicPixelSize(const Pic *p);
 Pic PicCopy(const Pic *src);
 void PicFree(Pic *pic);
 bool PicIsNone(const Pic *pic);

@@ -32,7 +32,7 @@
 bool WindowContextCreate(
 	WindowContext *wc, const Rect2i windowDim, const int windowFlags,
 	const char *title, SDL_Surface *icon,
-	const struct vec2i rendererLogicalSize)
+	const struct vec2i rendererLogicalSize, const int renderScale)
 {
 	LOG(LM_GFX, LL_DEBUG, "creating window (%X, %X) %dx%d flags(%X)",
 		windowDim.Pos.x, windowDim.Pos.y, windowDim.Size.x, windowDim.Size.y,
@@ -59,14 +59,15 @@ bool WindowContextCreate(
 
 	wc->logicalSize = rendererLogicalSize;
 
-	if (!WindowContextInitTextures(wc, rendererLogicalSize))
+	if (!WindowContextInitTextures(wc, rendererLogicalSize, renderScale))
 	{
 		return false;
 	}
 	return true;
 }
 bool WindowContextInitTextures(
-	WindowContext *wc, const struct vec2i rendererLogicalSize)
+	WindowContext *wc, const struct vec2i rendererLogicalSize,
+	const int renderScale)
 {
 	if (wc->renderer == NULL)
 	{
@@ -74,11 +75,14 @@ bool WindowContextInitTextures(
 	}
 
 	wc->logicalSize = rendererLogicalSize;
+	wc->renderScale = renderScale > 1 ? renderScale : 1;
 
 	CArrayInit(&wc->texturesBkg, sizeof(SDL_Texture *));
 	CArrayInit(&wc->textures, sizeof(SDL_Texture *));
 
-	// Init final presentation texture
+	// Init final presentation texture. Everything is drawn into it in
+	// logical coordinates; with a render scale above 1 the logical size
+	// below scales them up, so high-res art keeps its detail.
 	if (wc->final != NULL)
 	{
 		SDL_DestroyTexture(wc->final);
@@ -86,7 +90,8 @@ bool WindowContextInitTextures(
 	}
 	wc->final = SDL_CreateTexture(
 		wc->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
-		rendererLogicalSize.x, rendererLogicalSize.y);
+		rendererLogicalSize.x * wc->renderScale,
+		rendererLogicalSize.y * wc->renderScale);
 	if (wc->final == NULL)
 	{
 		LOG(LM_GFX, LL_ERROR, "cannot create final texture: %s",

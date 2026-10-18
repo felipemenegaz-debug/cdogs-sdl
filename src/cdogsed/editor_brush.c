@@ -667,7 +667,7 @@ bool EditorBrushTryLoadGuideImage(EditorBrush *b, const char *filename)
 		return false;
 	SDL_Surface *sc = SDL_ConvertSurface(s, gGraphicsDevice.Format, 0);
 	SDL_FreeSurface(s);
-	PicLoad(&b->GuideImagePic, svec2i(sc->w, sc->h), svec2i_zero(), sc, false);
+	PicLoad(&b->GuideImagePic, svec2i(sc->w, sc->h), svec2i_zero(), sc, 1);
 	SDL_FreeSurface(sc);
 	return true;
 }

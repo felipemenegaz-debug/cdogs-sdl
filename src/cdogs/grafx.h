@@ -80,6 +80,8 @@ typedef struct
 typedef struct
 {
 	int IsInitialized;
+	// High-res art and rendering, read once at startup (Graphics.HD)
+	bool HD;
 	int IsWindowInitialized;
 	SDL_Surface *icon;
 	SDL_Texture *screen;
@@ -101,6 +103,8 @@ extern GraphicsDevice gGraphicsDevice;
 
 void GraphicsInit(GraphicsDevice *device, Config *c);
 void GraphicsInitialize(GraphicsDevice *g);
+// Pixels per logical pixel the game is drawn at
+int GraphicsRenderScale(const GraphicsDevice *g);
 void GraphicsTerminate(GraphicsDevice *g);
 int GraphicsGetScreenSize(GraphicsConfig *config);
 int GraphicsGetMemSize(GraphicsConfig *config);

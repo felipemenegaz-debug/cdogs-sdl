@@ -56,27 +56,24 @@ Uint32 ColorToPixel(
 		((Uint32)color.a << aShift);
 }
 
-// Get the true pixel size of the pic
-static struct vec2i PicPixelSize(const Pic *p)
+static int PicScale(const Pic *p)
 {
-	if (p->isHD)
-	{
-		return svec2i_scale(p->size, 2);
-	}
-	return p->size;
+	return p->Scale > 1 ? p->Scale : 1;
+}
+
+struct vec2i PicPixelSize(const Pic *p)
+{
+	return svec2i_scale(p->size, PicScale(p));
 }
 
 void PicLoad(
-	Pic *p, const struct vec2i size, const struct vec2i offset, const SDL_Surface *image, const bool isHD)
+	Pic *p, const struct vec2i size, const struct vec2i offset, const SDL_Surface *image, const int scale)
 {
 	memset(p, 0, sizeof *p);
 	p->size = size;
-	// Pretend to be half the size for HD pics
-	p->isHD = isHD;
-	if (isHD)
-	{
-		p->size = svec2i_scale_divide(p->size, 2);
-	}
+	// High-res pics keep the logical size of the original art
+	p->Scale = scale > 1 ? scale : 1;
+	p->size = svec2i_scale_divide(p->size, p->Scale);
 	p->offset = svec2i_zero();
 	CMALLOC(p->Data, size.x * size.y * sizeof *((Pic *)0)->Data);
 	if (p->Data == NULL)
@@ -170,6 +167,14 @@ bool PicTryMakeTex(Pic *p)
 			SDL_GetError());
 		return false;
 	}
+#if SDL_VERSION_ATLEAST(2, 0, 12)
+	// High-res art is drawn at many sizes (perspective, lower render
+	// scales), so filter it instead of picking the nearest texel
+	if (PicScale(p) > 1)
+	{
+		SDL_SetTextureScaleMode(p->Tex, SDL_ScaleModeLinear);
+	}
+#endif
 	LOG(LM_GFX, LL_TRACE, "made texture %p data(%p) count(%d)",
 		p->Tex, p->Data, hashmap_length(textureDebugger));
 	if (LL_TRACE >= LogModuleGetLevel(LM_GFX))
@@ -197,7 +202,7 @@ Pic PicCopy(const Pic *src)
 	CMALLOC(p.Data, size);
 	memcpy(p.Data, src->Data, size);
 	p.Tex = NULL;
-	p.isHD = src->isHD;
+	p.Scale = src->Scale;
 	return p;
 }
 
@@ -300,10 +305,7 @@ void PicShrink(Pic *pic, const struct vec2i size, const struct vec2i offset)
 	CFREE(pic->Data);
 	pic->Data = newData;
 	pic->size = size;
-	if (pic->isHD)
-	{
-		pic->size = svec2i_scale_divide(pic->size, 2);
-	}
+	pic->size = svec2i_scale_divide(pic->size, PicScale(pic));
 	pic->offset = svec2i_zero();
 	PicTryMakeTex(pic);
 }
@@ -337,15 +339,19 @@ void PicRender(
 	Rect2i dest = Rect2iNew(pos, src.Size);
 	// Apply scale to render dest
 	const bool unscaled = svec2_is_equal(scale, svec2_one());
-	const struct vec2 destScale = svec2_scale(scale, p->isHD ? 0.5f : 1);
+	const struct vec2 destScale = svec2_scale(scale, 1.0f / PicScale(p));
 	if (!unscaled)
 	{
-		dest.Pos.x -= (mint_t)MROUND((destScale.x - 1) * src.Size.x / 2);
-		dest.Pos.y -= (mint_t)MROUND((destScale.y - 1) * src.Size.y / 2);
+		// Centre on the logical size, which differs from the texture
+		// size for high-res pics
+		dest.Pos.x -= (mint_t)MROUND(
+			(scale.x - 1) * src.Size.x / PicScale(p) / 2);
+		dest.Pos.y -= (mint_t)MROUND(
+			(scale.y - 1) * src.Size.y / PicScale(p) / 2);
 		dest.Size.x = (mint_t)MROUND(src.Size.x * destScale.x);
 		dest.Size.y = (mint_t)MROUND(src.Size.y * destScale.y);
 	}
-	else if (p->isHD)
+	else if (PicScale(p) > 1)
 	{
 		dest.Size.x = (mint_t)MROUND(src.Size.x * destScale.x);
 		dest.Size.y = (mint_t)MROUND(src.Size.y * destScale.y);
