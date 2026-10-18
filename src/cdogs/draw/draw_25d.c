@@ -33,8 +33,8 @@
 #include <string.h>
 
 #include "actors.h"
+#include "aheasing/easing.h"
 #include "config.h"
-#include "door.h"
 #include "draw/draw.h"
 #include "draw/draw_perspective.h"
 #include "grafx.h"
@@ -84,7 +84,6 @@ typedef struct
 {
 	const Tile *tile;
 	struct vec2i pos;
-	int cell;
 } DoorEntry;
 
 static SDL_Texture *sAtlas = NULL;
@@ -616,11 +615,36 @@ static void DrawWallTile(
 		pic->size.y > TILE_HEIGHT, pos, mask, true);
 }
 
+// Doors are thin panels standing across the middle of their tile, between
+// the walls on either side, and they sink into the floor as they open. The
+// tile itself is the open doorway (drawn as floor). Door art follows the
+// classic layout: horizontal doors are the top over a TILE_HEIGHT face,
+// vertical doors are their top as seen from above.
+#define DOOR_THICK 6.0f
+
+// How closed a door is: 1 closed, 0 open, in between while it moves (with
+// the same easing as the classic door animation)
+static float DoorClosed(const DoorState *d)
+{
+	if (d->Count <= 0)
+	{
+		return d->IsOpen ? 0.0f : 1.0f;
+	}
+	const double opened =
+		d->IsOpen
+			? CircularEaseOut(
+				  (DOORSTATE_COUNT - d->Count) / (double)DOORSTATE_COUNT)
+			: CircularEaseIn(d->Count / (double)DOORSTATE_COUNT);
+	return 1.0f - (float)opened;
+}
+
 static void DrawDoorTile(
 	SDL_Renderer *r, const DrawPerspective *p, const DoorEntry *d,
 	const bool useFog)
 {
-	if (d->cell < 0)
+	const DoorState *door = &d->tile->Door;
+	if (door->Class == NULL || door->Class->Pic == NULL ||
+		door->Class->Pic->Tex == NULL)
 	{
 		return;
 	}
@@ -629,13 +653,90 @@ static void DrawDoorTile(
 	{
 		return;
 	}
-	const struct vec2i o = CellOrigin(d->cell);
-	const struct vec2 uv0 =
-		svec2((float)o.x / ATLAS_SIZE, (float)o.y / ATLAS_SIZE);
-	const struct vec2 uv1 = svec2(
-		(float)(o.x + TILE_WIDTH) / ATLAS_SIZE,
-		(float)(o.y + TILE_HEIGHT * 2) / ATLAS_SIZE);
-	DrawBox(r, p, sAtlas, uv0, uv1, true, d->pos, mask, false);
+	const float closed = DoorClosed(door);
+	if (closed <= 0)
+	{
+		return;
+	}
+	const Pic *pic = door->Class->Pic;
+	SDL_Texture *tex = pic->Tex;
+	PrepareTexture(tex);
+	const float h = WALL_H * closed;
+	const struct vec2 w0 = TileWorldPos(d->pos.x, d->pos.y);
+	const struct vec2 w1 = TileWorldPos(d->pos.x + 1, d->pos.y + 1);
+	if (door->IsHorizontal)
+	{
+		// Across a north-south passage: a slab along x, thin in y. Map y is
+		// foreshortened, so the thickness shrinks the same way
+		const float yc = (w0.y + w1.y) / 2;
+		const float t = DOOR_THICK * TILE_HEIGHT / TILE_WIDTH / 2;
+		const float topRows = (float)MAX(pic->size.y - TILE_HEIGHT, 1);
+		const float vTop = topRows / pic->size.y;
+		// Front: the top part of the face is what is left above the floor
+		const Point3 front[4] = {
+			{svec2(w0.x, yc + t), h},
+			{svec2(w1.x, yc + t), h},
+			{svec2(w1.x, yc + t), 0},
+			{svec2(w0.x, yc + t), 0}};
+		DrawQuad3D(
+			r, tex, p, front, svec2(0, vTop),
+			svec2(1, vTop + (1 - vTop) * closed),
+			ToSDLColor(mask, SHADE_FRONT), NULL);
+		const Point3 top[4] = {
+			{svec2(w0.x, yc - t), h},
+			{svec2(w1.x, yc - t), h},
+			{svec2(w1.x, yc + t), h},
+			{svec2(w0.x, yc + t), h}};
+		DrawQuad3D(
+			r, tex, p, top, svec2_zero(), svec2(1, vTop),
+			ToSDLColor(mask, 1.0f), NULL);
+	}
+	else
+	{
+		// Across an east-west passage: a slab along y, thin in x; its long
+		// sides show when the camera is off to that side
+		const float xc = (w0.x + w1.x) / 2;
+		const float xa = xc - DOOR_THICK / 2;
+		const float xb = xc + DOOR_THICK / 2;
+		if (xb < p->Focus.x)
+		{
+			const Point3 c[4] = {
+				{svec2(xb, w1.y), h},
+				{svec2(xb, w0.y), h},
+				{svec2(xb, w0.y), 0},
+				{svec2(xb, w1.y), 0}};
+			DrawQuad3D(
+				r, tex, p, c, svec2_zero(), svec2(1, closed),
+				ToSDLColor(mask, SHADE_SIDE), NULL);
+		}
+		if (xa > p->Focus.x)
+		{
+			const Point3 c[4] = {
+				{svec2(xa, w0.y), h},
+				{svec2(xa, w1.y), h},
+				{svec2(xa, w1.y), 0},
+				{svec2(xa, w0.y), 0}};
+			DrawQuad3D(
+				r, tex, p, c, svec2_zero(), svec2(1, closed),
+				ToSDLColor(mask, SHADE_SIDE), NULL);
+		}
+		const Point3 front[4] = {
+			{svec2(xa, w1.y), h},
+			{svec2(xb, w1.y), h},
+			{svec2(xb, w1.y), 0},
+			{svec2(xa, w1.y), 0}};
+		DrawQuad3D(
+			r, tex, p, front, svec2_zero(), svec2(1, closed),
+			ToSDLColor(mask, SHADE_FRONT), NULL);
+		const Point3 top[4] = {
+			{svec2(xa, w0.y), h},
+			{svec2(xb, w0.y), h},
+			{svec2(xb, w1.y), h},
+			{svec2(xa, w1.y), h}};
+		DrawQuad3D(
+			r, tex, p, top, svec2_zero(), svec2_one(), ToSDLColor(mask, 1.0f),
+			NULL);
+	}
 }
 
 static struct vec2 ThingDrawPos(const Thing *t)
@@ -842,11 +943,7 @@ static void CollectThings(
 			tile->outOfSight = !LOSTileIsVisible(&gMap, pos);
 			if (tile->Class != NULL && tile->Class->Type == TILE_CLASS_DOOR)
 			{
-				DoorEntry d = {tile, pos, -1};
-				if (*numCells < MAX_CELLS)
-				{
-					d.cell = (*numCells)++;
-				}
+				DoorEntry d = {tile, pos};
 				CArrayPushBack(&sDoors, &d);
 			}
 			if (tile->outOfSight)
@@ -922,18 +1019,6 @@ static void RenderAtlas(SDL_Renderer *r)
 			false);
 		CA_FOREACH_END()
 	}
-	CA_FOREACH(const DoorEntry, d, sDoors)
-	if (d->cell < 0)
-	{
-		continue;
-	}
-	RenderCell(r, d->cell);
-	// Doors draw a wall-like pic from WALL_OFFSET_Y above the tile
-	DoorDraw(
-		&d->tile->Door,
-		svec2i_add(CellOrigin(d->cell), svec2i(0, -WALL_OFFSET_Y)),
-		colorWhite);
-	CA_FOREACH_END()
 
 	SDL_RenderSetClipRect(r, NULL);
 	SDL_SetRenderTarget(r, prevTarget);
@@ -1041,7 +1126,6 @@ void Draw25DWorld(
 			{
 				break;
 			}
-			PrepareTexture(sAtlas);
 			DrawDoorTile(r, p, d, useFog);
 			nextDoor++;
 		}
