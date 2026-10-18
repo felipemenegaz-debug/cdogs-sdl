@@ -73,6 +73,17 @@ typedef enum
 const char *ScaleModeStr(int q);
 int StrScaleMode(const char *str);
 
+// Camera pitch in the 2.5D view, from nearly top-down to low
+typedef enum
+{
+	CAMERA_TILT_HIGH,
+	CAMERA_TILT_CLASSIC,
+	CAMERA_TILT_LOW,
+	CAMERA_TILT_LOWER
+} CameraTilt;
+const char *CameraTiltStr(int t);
+int StrCameraTilt(const char *str);
+
 typedef enum
 {
 	GORE_NONE,

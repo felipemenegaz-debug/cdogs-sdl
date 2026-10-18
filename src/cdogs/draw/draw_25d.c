@@ -1257,6 +1257,22 @@ static void RenderAtlas(SDL_Renderer *r)
 	SDL_RenderSetClipRect(r, hadClip ? &prevClip : NULL);
 }
 
+// cos(pitch) for each camera tilt; the classic one is the classic view's
+static float CameraTiltCos(const CameraTilt t)
+{
+	switch (t)
+	{
+	case CAMERA_TILT_HIGH:
+		return 0.87f; // about 30 degrees from straight down
+	case CAMERA_TILT_LOW:
+		return 0.62f; // about 52 degrees
+	case CAMERA_TILT_LOWER:
+		return 0.5f; // 60 degrees
+	default:
+		return PERSPECTIVE_CLASSIC_COS; // about 41 degrees
+	}
+}
+
 void Draw25DWorld(
 	DrawBuffer *b, const struct vec2i offset, const DrawBufferArgs *args)
 {
@@ -1272,7 +1288,10 @@ void Draw25DWorld(
 	const float dist = PERSPECTIVE_DIST_DEFAULT *
 					   MAX(1.0f, (float)gGraphicsDevice.cachedConfig.Res.y /
 									 PERSPECTIVE_REF_ROWS);
-	DrawPerspectiveInit(&b->Perspective, b->Origin, focusScreen, dist);
+	DrawPerspectiveInit(
+		&b->Perspective, b->Origin, focusScreen, dist,
+		CameraTiltCos((CameraTilt)ConfigGetEnum(&gConfig, "Graphics.CameraTilt")),
+		ConfigGetInt(&gConfig, "Graphics.CameraZoom") / 100.0f);
 	b->UsePerspective = true;
 	const DrawPerspective *p = &b->Perspective;
 

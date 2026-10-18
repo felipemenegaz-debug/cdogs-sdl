@@ -50,6 +50,10 @@
 // Points closer to the camera than this fraction of the distance are culled
 #define PERSPECTIVE_NEAR 0.1f
 
+// cos(pitch) of the classic view (TILE_HEIGHT / TILE_WIDTH); the camera can
+// be tilted lower (smaller) or higher (larger), which shows more or less of
+// the walls' faces, and only the classic pitch lines up 1:1 at the focus
+#define PERSPECTIVE_CLASSIC_COS 0.75f
 typedef struct
 {
 	struct vec2 Focus;		 // map point the camera looks at
@@ -57,11 +61,12 @@ typedef struct
 	float CosPitch;
 	float SinPitch;
 	float Dist;
+	float Zoom; // screen size multiplier around the focus
 } DrawPerspective;
-
 void DrawPerspectiveInit(
 	DrawPerspective *p, const struct vec2 focus,
-	const struct vec2 focusScreen, const float dist);
+	const struct vec2 focusScreen, const float dist, const float cosPitch,
+	const float zoom);
 
 // Project a world point. bb is an extra offset in pixels within the billboard
 // plane, which always faces the camera (x right, y down), so sprites anchored

@@ -116,6 +116,26 @@ int StrScaleMode(const char *s)
 	S2T(SCALE_MODE_BILINEAR, "Bilinear");
 	return SCALE_MODE_NN;
 }
+const char *CameraTiltStr(int t)
+{
+	switch (t)
+	{
+		T2S(CAMERA_TILT_HIGH, "High");
+		T2S(CAMERA_TILT_CLASSIC, "Classic");
+		T2S(CAMERA_TILT_LOW, "Low");
+		T2S(CAMERA_TILT_LOWER, "Lower");
+	default:
+		return "";
+	}
+}
+int StrCameraTilt(const char *s)
+{
+	S2T(CAMERA_TILT_HIGH, "High");
+	S2T(CAMERA_TILT_CLASSIC, "Classic");
+	S2T(CAMERA_TILT_LOW, "Low");
+	S2T(CAMERA_TILT_LOWER, "Lower");
+	return CAMERA_TILT_CLASSIC;
+}
 const char *GoreAmountStr(int g)
 {
 	switch (g)
@@ -673,6 +693,13 @@ Config ConfigDefault(void)
 	ConfigGroupAdd(&gfx, ConfigNewBool("Perspective", false));
 	// Light and shade in the 2.5D view (Perspective)
 	ConfigGroupAdd(&gfx, ConfigNewBool("Lights", true));
+	// Camera pitch and zoom (percent) of the 2.5D view
+	ConfigGroupAdd(
+		&gfx, ConfigNewEnum(
+				  "CameraTilt", CAMERA_TILT_CLASSIC, CAMERA_TILT_HIGH,
+				  CAMERA_TILT_LOWER, StrCameraTilt, CameraTiltStr));
+	ConfigGroupAdd(
+		&gfx, ConfigNewInt("CameraZoom", 100, 50, 200, 25, NULL, NULL));
 	// High-res art and rendering; takes effect on restart
 	ConfigGroupAdd(&gfx, ConfigNewBool("HD", false));
 	ConfigGroupAdd(

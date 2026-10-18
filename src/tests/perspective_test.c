@@ -10,7 +10,18 @@
 static DrawPerspective MakeCamera(const float dist)
 {
 	DrawPerspective p;
-	DrawPerspectiveInit(&p, svec2(400, 300), svec2(160, 120), dist);
+	DrawPerspectiveInit(
+		&p, svec2(400, 300), svec2(160, 120), dist, PERSPECTIVE_CLASSIC_COS,
+		1.0f);
+	return p;
+}
+
+static DrawPerspective MakeTiltedCamera(const float cosPitch, const float zoom)
+{
+	DrawPerspective p;
+	DrawPerspectiveInit(
+		&p, svec2(400, 300), svec2(160, 120), PERSPECTIVE_DIST_DEFAULT,
+		cosPitch, zoom);
 	return p;
 }
 
@@ -155,10 +166,79 @@ FEATURE(PerspectiveUnproject, "Screen to ground")
 	SCENARIO_END
 FEATURE_END
 
+FEATURE(PerspectiveCamera, "Camera tilt and zoom")
+	SCENARIO("Ground points come back at any tilt and zoom")
+		GIVEN("low, classic and high cameras, zoomed in and out")
+			const float tilts[3] = {0.5f, PERSPECTIVE_CLASSIC_COS, 0.87f};
+			const float zooms[2] = {0.5f, 1.5f};
+			const struct vec2 points[3] = {
+				svec2(250, 180), svec2(400, 300), svec2(520, 390)};
+
+		WHEN("I project ground points and unproject the result")
+			bool allOk = true;
+			bool allMatch = true;
+			for (int t = 0; t < 3; t++)
+			{
+				for (int z = 0; z < 2; z++)
+				{
+					const DrawPerspective p = MakeTiltedCamera(tilts[t], zooms[z]);
+					for (int i = 0; i < 3; i++)
+					{
+						struct vec2 s, w;
+						allOk = allOk &&
+							DrawPerspectiveProject(
+								&p, points[i], 0, svec2_zero(), &s, NULL) &&
+							DrawPerspectiveUnproject(&p, s, &w);
+						allMatch = allMatch && NEAR(w.x, points[i].x, 0.01f) &&
+							NEAR(w.y, points[i].y, 0.01f);
+					}
+				}
+			}
+
+		THEN("I get the same ground points back")
+			SHOULD_BE_TRUE(allOk);
+			SHOULD_BE_TRUE(allMatch);
+	SCENARIO_END
+
+	SCENARIO("Zoom scales the view around the focus")
+		GIVEN("the same camera at zoom 1 and zoom 2")
+			const DrawPerspective p1 = MakeTiltedCamera(PERSPECTIVE_CLASSIC_COS, 1.0f);
+			const DrawPerspective p2 = MakeTiltedCamera(PERSPECTIVE_CLASSIC_COS, 2.0f);
+
+		WHEN("I project a point beside the focus")
+			struct vec2 s1, s2;
+			DrawPerspectiveProject(&p1, svec2(420, 300), 0, svec2_zero(), &s1, NULL);
+			DrawPerspectiveProject(&p2, svec2(420, 300), 0, svec2_zero(), &s2, NULL);
+
+		THEN("its distance from the focus doubles")
+			SHOULD_BE_TRUE(NEAR(s2.x - 160, 2 * (s1.x - 160), 0.01f));
+	SCENARIO_END
+
+	SCENARIO("A lower camera shows more of a wall's face")
+		GIVEN("classic and low cameras")
+			const DrawPerspective classic =
+				MakeTiltedCamera(PERSPECTIVE_CLASSIC_COS, 1.0f);
+			const DrawPerspective low = MakeTiltedCamera(0.5f, 1.0f);
+
+		WHEN("I project the bottom and top of a wall at the focus")
+			struct vec2 cb, ct, lb, lt;
+			DrawPerspectiveProject(&classic, svec2(400, 300), 0, svec2_zero(), &cb, NULL);
+			DrawPerspectiveProject(&classic, svec2(400, 300), 12, svec2_zero(), &ct, NULL);
+			DrawPerspectiveProject(&low, svec2(400, 300), 0, svec2_zero(), &lb, NULL);
+			DrawPerspectiveProject(&low, svec2(400, 300), 12, svec2_zero(), &lt, NULL);
+
+		THEN("the classic wall is about 12 pixels and the low one taller")
+			// The wall top is nearer the camera, so a little over 12
+			SHOULD_BE_TRUE(NEAR(cb.y - ct.y, 12, 0.5f));
+			SHOULD_BE_TRUE((lb.y - lt.y) - (cb.y - ct.y) > 2);
+	SCENARIO_END
+FEATURE_END
+
 CBEHAVE_RUN(
 	"Perspective features are:",
 	TEST_FEATURE(PerspectiveFocus),
 	TEST_FEATURE(PerspectiveClassic),
 	TEST_FEATURE(PerspectiveDepth),
-	TEST_FEATURE(PerspectiveUnproject)
+	TEST_FEATURE(PerspectiveUnproject),
+	TEST_FEATURE(PerspectiveCamera)
 )

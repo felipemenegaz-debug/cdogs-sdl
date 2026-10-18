@@ -31,7 +31,7 @@
 #include <math.h>
 
 // Pitch of the classic view: TILE_HEIGHT / TILE_WIDTH
-#define CLASSIC_COS 0.75f
+#define CLASSIC_COS PERSPECTIVE_CLASSIC_COS
 
 static float ClassicSin(void)
 {
@@ -40,13 +40,15 @@ static float ClassicSin(void)
 
 void DrawPerspectiveInit(
 	DrawPerspective *p, const struct vec2 focus,
-	const struct vec2 focusScreen, const float dist)
+	const struct vec2 focusScreen, const float dist, const float cosPitch,
+	const float zoom)
 {
 	p->Focus = focus;
 	p->FocusScreen = focusScreen;
-	p->CosPitch = CLASSIC_COS;
-	p->SinPitch = ClassicSin();
+	p->CosPitch = cosPitch;
+	p->SinPitch = sqrtf(1.0f - cosPitch * cosPitch);
 	p->Dist = dist;
+	p->Zoom = zoom;
 }
 
 bool DrawPerspectiveProject(
@@ -68,7 +70,7 @@ bool DrawPerspectiveProject(
 	{
 		return false;
 	}
-	const float s = p->Dist / depth;
+	const float s = p->Dist / depth * p->Zoom;
 	*screen = svec2(p->FocusScreen.x + sx * s, p->FocusScreen.y + sy * s);
 	if (scale != NULL)
 	{
@@ -81,8 +83,8 @@ bool DrawPerspectiveUnproject(
 	const DrawPerspective *p, const struct vec2 screen, struct vec2 *world)
 {
 	// Inverse of DrawPerspectiveProject for h = 0 and no billboard offset
-	const float sx = screen.x - p->FocusScreen.x;
-	const float sy = screen.y - p->FocusScreen.y;
+	const float sx = (screen.x - p->FocusScreen.x) / p->Zoom;
+	const float sy = (screen.y - p->FocusScreen.y) / p->Zoom;
 	const float denom = p->Dist * p->CosPitch + sy * p->SinPitch;
 	if (denom <= p->Dist * PERSPECTIVE_NEAR)
 	{

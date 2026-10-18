@@ -143,6 +143,10 @@ static menu_t *MenuCreateOptionsGraphics(
 		menu, ConfigGet(data->config, "Graphics.Perspective"));
 	MenuAddConfigOptionsItem(
 		menu, ConfigGet(data->config, "Graphics.Lights"));
+	MenuAddConfigOptionsItem(
+		menu, ConfigGet(data->config, "Graphics.CameraTilt"));
+	MenuAddConfigOptionsItem(
+		menu, ConfigGet(data->config, "Graphics.CameraZoom"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.HD"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.Gore"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.Brass"));
