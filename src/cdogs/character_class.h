@@ -49,6 +49,11 @@ typedef struct
 	color_t BloodColor;
 	char *Corpse;
 	bool HasHeadParts[HEAD_PART_COUNT];
+	// Painted version of the class (Graphics.PaintedCharacters): its body
+	// type and head; the head already has hair, so no head parts are drawn
+	char *PaintedBody;
+	char *PaintedHeadSprites;
+	const CharSprites *PaintedSprites;
 } CharacterClass;
 typedef struct
 {
@@ -63,6 +68,13 @@ extern map_t gDetachableHats;
 
 const CharacterClass *StrCharacterClass(const char *s);
 void CharacterClassCopy(CharacterClass *dst, const CharacterClass *src);
+
+// What to draw a class with: its painted version when it has one and
+// Graphics.PaintedCharacters is on, its own sprites otherwise
+bool CharacterClassIsPainted(const CharacterClass *c);
+const CharSprites *CharacterClassSprites(const CharacterClass *c);
+const char *CharacterClassHeadSprites(const CharacterClass *c);
+bool CharacterClassHasHeadPart(const CharacterClass *c, const HeadPart hp);
 // Legacy character class from "face" index
 const char *IntCharacterFace(const int face);
 void CharacterOldFaceToHeadParts(

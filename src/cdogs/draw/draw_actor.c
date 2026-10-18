@@ -299,18 +299,18 @@ static void UpdatePilotHeadPic(
 	}
 	pics->Head = GetHeadPic(c->Class, headDir, grimace, &c->Colors);
 	pics->HeadOffset = GetActorDrawOffset(
-		pics->Head, BODY_PART_HEAD, c->Class->Sprites, a->anim.Type, frame,
+		pics->Head, BODY_PART_HEAD, CharacterClassSprites(c->Class), a->anim.Type, frame,
 		dir, GUNSTATE_READY);
 
 	for (HeadPart hp = HEAD_PART_HAIR; hp < HEAD_PART_COUNT; hp++)
 	{
-		if (c->Class->HasHeadParts[hp])
+		if (CharacterClassHasHeadPart(c->Class, hp))
 		{
 			pics->HeadParts[hp] = GetHeadPartPic(
 				c->HeadParts[hp], hp, headDir, grimace, a->isHatDetached,
 				&c->Colors);
 			pics->HeadPartOffsets[hp] = GetActorDrawOffset(
-				pics->HeadParts[hp], BODY_PART_HEAD, c->Class->Sprites,
+				pics->HeadParts[hp], BODY_PART_HEAD, CharacterClassSprites(c->Class),
 				a->anim.Type, frame, dir, GUNSTATE_READY);
 		}
 	}
@@ -350,7 +350,7 @@ static ActorPics GetUnorderedPics(
 	ActorPics pics;
 	memset(&pics, 0, sizeof pics);
 
-	pics.Sprites = c->Class->Sprites;
+	pics.Sprites = CharacterClassSprites(c->Class);
 
 	// Dummy return to handle invalid character class
 	if (c->Class == NULL)
@@ -419,14 +419,14 @@ static ActorPics GetUnorderedPics(
 	const int grips = gun == NULL ? 0 : WC_BARREL_ATTR(*gun, Grips, 0);
 	pics.Head = GetHeadPic(c->Class, headDir, grimace, colors);
 	pics.HeadOffset = GetActorDrawOffset(
-		pics.Head, BODY_PART_HEAD, c->Class->Sprites, anim, frame, dir,
+		pics.Head, BODY_PART_HEAD, CharacterClassSprites(c->Class), anim, frame, dir,
 		GUNSTATE_READY);
 
 	const char *festiveHat = GetFestiveHat();
 	for (HeadPart hp = HEAD_PART_HAIR; hp < HEAD_PART_COUNT; hp++)
 	{
 		// Holiday override
-		const bool hasHeadPart = c->Class->HasHeadParts[hp] ||
+		const bool hasHeadPart = CharacterClassHasHeadPart(c->Class, hp) ||
 								 (hp == HEAD_PART_HAT && festiveHat != NULL);
 		if (hasHeadPart)
 		{
@@ -436,7 +436,7 @@ static ActorPics GetUnorderedPics(
 			pics.HeadParts[hp] = GetHeadPartPic(
 				headPart, hp, headDir, grimace, isHatDetached, colors);
 			pics.HeadPartOffsets[hp] = GetActorDrawOffset(
-				pics.HeadParts[hp], BODY_PART_HEAD, c->Class->Sprites, anim,
+				pics.HeadParts[hp], BODY_PART_HEAD, CharacterClassSprites(c->Class), anim,
 				frame, dir, GUNSTATE_READY);
 		}
 	}
@@ -451,7 +451,7 @@ static ActorPics GetUnorderedPics(
 		{
 			pics.GunOffsets[i] = GetActorDrawOffset(
 				pics.Guns[i], i == 0 ? BODY_PART_GUN_R : BODY_PART_GUN_L,
-				c->Class->Sprites, anim, frame,
+				CharacterClassSprites(c->Class), anim, frame,
 				i == 0 ? dir : DirectionMirrorX(dir), barrelStates[i]);
 			if (i == 1)
 			{
@@ -464,17 +464,17 @@ static ActorPics GetUnorderedPics(
 
 	// Body
 	pics.Body = GetBodyPic(
-		&gPicManager, c->Class->Sprites, dir, anim, frame, numBarrels, grips,
+		&gPicManager, CharacterClassSprites(c->Class), dir, anim, frame, numBarrels, grips,
 		barrelStates[0], colors);
 	pics.BodyOffset = GetActorDrawOffset(
-		pics.Body, BODY_PART_BODY, c->Class->Sprites, anim, frame, dir,
+		pics.Body, BODY_PART_BODY, CharacterClassSprites(c->Class), anim, frame, dir,
 		GUNSTATE_READY);
 
 	// Legs
 	pics.Legs = GetLegsPic(
-		&gPicManager, c->Class->Sprites, legDir, anim, frame, colors);
+		&gPicManager, CharacterClassSprites(c->Class), legDir, anim, frame, colors);
 	pics.LegsOffset = GetActorDrawOffset(
-		pics.Legs, BODY_PART_LEGS, c->Class->Sprites, anim, frame, legDir,
+		pics.Legs, BODY_PART_LEGS, CharacterClassSprites(c->Class), anim, frame, legDir,
 		GUNSTATE_READY);
 	return pics;
 }
@@ -512,7 +512,7 @@ static void ReorderPics(
 			: dir;
 	for (int bp = 0; bp < BODY_PART_COUNT; bp++)
 	{
-		const BodyPart drawOrder = c->Class->Sprites->Order[drawOrderDir][bp];
+		const BodyPart drawOrder = CharacterClassSprites(c->Class)->Order[drawOrderDir][bp];
 		switch (drawOrder)
 		{
 		case BODY_PART_HEAD:
@@ -661,7 +661,8 @@ const Pic *GetHeadPic(
 	const CharacterClass *c, const direction_e dir, const bool isGrimacing,
 	const CharColors *colors)
 {
-	if (strlen(c->HeadSprites) == 0)
+	const char *headSprites = CharacterClassHeadSprites(c);
+	if (headSprites == NULL || strlen(headSprites) == 0)
 	{
 		return NULL;
 	}
@@ -670,7 +671,7 @@ const Pic *GetHeadPic(
 	const int idx = (int)dir + row * 8;
 	// Get or generate masked sprites
 	const NamedSprites *ns =
-		PicManagerGetCharSprites(&gPicManager, c->HeadSprites, colors);
+		PicManagerGetCharSprites(&gPicManager, headSprites, colors);
 	return CArrayGet(&ns->pics, idx);
 }
 const Pic *GetHeadPartPic(
@@ -805,7 +806,7 @@ void DrawHead(
 	const bool isHatDetached = false;
 	const Pic *head = GetHeadPic(c->Class, dir, isGrimacing, &c->Colors);
 	const struct vec2i headOffset = GetActorDrawOffset(
-		head, BODY_PART_HEAD, c->Class->Sprites, ACTORANIMATION_IDLE, 0,
+		head, BODY_PART_HEAD, CharacterClassSprites(c->Class), ACTORANIMATION_IDLE, 0,
 		DIRECTION_DOWN, GUNSTATE_READY);
 	const color_t mask = colorWhite;
 	const struct vec2i charOffset = svec2i(0, 12);
@@ -815,7 +816,7 @@ void DrawHead(
 
 	for (HeadPart hp = HEAD_PART_HAIR; hp < HEAD_PART_COUNT; hp++)
 	{
-		if (c->Class->HasHeadParts[hp])
+		if (CharacterClassHasHeadPart(c->Class, hp))
 		{
 			const Pic *pic = GetHeadPartPic(
 				c->HeadParts[hp], hp, dir, isGrimacing, isHatDetached,
@@ -823,7 +824,7 @@ void DrawHead(
 			if (pic)
 			{
 				const struct vec2i headPartOffset = GetActorDrawOffset(
-					pic, BODY_PART_HEAD, c->Class->Sprites,
+					pic, BODY_PART_HEAD, CharacterClassSprites(c->Class),
 					ACTORANIMATION_IDLE, 0, DIRECTION_DOWN, GUNSTATE_READY);
 				PicRender(
 					pic, renderer,

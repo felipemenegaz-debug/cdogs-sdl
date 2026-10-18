@@ -7,7 +7,9 @@
         "Type": "Directional",
         "Sprites": "chars/heads/jones"
       },
-      "Sounds": "man"
+      "Sounds": "man",
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_jones"
     },
     {
       "Name": "Soldier",
@@ -16,7 +18,9 @@
         "Sprites": "chars/heads/jones"
       },
       "Body": "soldier",
-      "Sounds": "man"
+      "Sounds": "man",
+      "PaintedBody": "pintado_soldier",
+      "PaintedHead": "chars/heads/pintado_jones"
     },
     {
       "Name": "Ogre",
@@ -25,7 +29,9 @@
         "Sprites": "chars/heads/ogre"
       },
       "Sounds": "ogre",
-      "BloodColor": "333333"
+      "BloodColor": "333333",
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_ogre"
     },
     {
       "Name": "Bug-eye",
@@ -37,7 +43,9 @@
       "BloodColor": "00ff00",
       "HasHair": false,
       "HasFacehair": false,
-      "HasGlasses": false
+      "HasGlasses": false,
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_bugeye"
     },
     {
       "Name": "Mad bug-eye",
@@ -49,7 +57,9 @@
       "BloodColor": "00ff00",
       "HasHair": false,
       "HasFacehair": false,
-      "HasGlasses": false
+      "HasGlasses": false,
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_madbugeye"
     },
     {
       "Name": "Robot",
@@ -61,7 +71,9 @@
       "BloodColor": "0000ff",
       "HasHair": false,
       "HasFacehair": false,
-      "HasGlasses": false
+      "HasGlasses": false,
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_robot"
     },
     {
       "Name": "Lady",
@@ -69,7 +81,9 @@
         "Type": "Directional",
         "Sprites": "chars/heads/lady"
       },
-      "Sounds": "woman"
+      "Sounds": "woman",
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_lady"
     },
     {
       "Name": "Cyborg",
@@ -78,7 +92,9 @@
         "Sprites": "chars/heads/cyborg"
       },
       "Sounds": "zombie",
-      "BloodColor": "ff00ff"
+      "BloodColor": "ff00ff",
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_cyborg"
     },
     {
       "Name": "Bones",
@@ -91,7 +107,9 @@
       "Footsteps": "bones",
       "BloodColor": "ffffff",
       "HasHair": false,
-      "HasFacehair": false
+      "HasFacehair": false,
+      "PaintedBody": "pintado_skinny",
+      "PaintedHead": "chars/heads/pintado_skull"
     },
     {
       "Name": "Big Bones",
@@ -106,7 +124,9 @@
       "HasHair": false,
       "HasFacehair": false,
       "HasHat": false,
-      "HasGlasses": false
+      "HasGlasses": false,
+      "PaintedBody": "pintado_big_skinny",
+      "PaintedHead": "chars/heads/pintado_skull"
     },
     {
       "Name": "Dog",
@@ -118,13 +138,15 @@
       "HasHair": false,
       "HasFacehair": false,
       "HasHat": false,
-      "HasGlasses": false
+      "HasGlasses": false,
+      "PaintedBody": "pintado",
+      "PaintedHead": "chars/heads/pintado_dog"
     },
     {
       "Name": "Pintado",
       "HeadPics": {
         "Type": "Directional",
-        "Sprites": "chars/heads/pintado"
+        "Sprites": "chars/heads/pintado_jones"
       },
       "Body": "pintado",
       "Sounds": "man",

@@ -693,6 +693,8 @@ Config ConfigDefault(void)
 	ConfigGroupAdd(&gfx, ConfigNewBool("Perspective", false));
 	// Light and shade in the 2.5D view (Perspective)
 	ConfigGroupAdd(&gfx, ConfigNewBool("Lights", true));
+	// Painted versions of the characters, where a class has one
+	ConfigGroupAdd(&gfx, ConfigNewBool("PaintedCharacters", true));
 	// Camera pitch and zoom (percent) of the 2.5D view
 	ConfigGroupAdd(
 		&gfx, ConfigNewEnum(

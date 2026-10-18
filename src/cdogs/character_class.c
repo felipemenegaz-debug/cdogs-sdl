@@ -28,6 +28,7 @@
 */
 #include "character_class.h"
 
+#include "config.h"
 #include "json_utils.h"
 #include "log.h"
 
@@ -72,6 +73,10 @@ void CharacterClassCopy(CharacterClass *dst, const CharacterClass *src)
 		CSTRDUP(dst->Sounds, src->Sounds);
 	if (src->Footsteps)
 		CSTRDUP(dst->Footsteps, src->Footsteps);
+	if (src->PaintedBody)
+		CSTRDUP(dst->PaintedBody, src->PaintedBody);
+	if (src->PaintedHeadSprites)
+		CSTRDUP(dst->PaintedHeadSprites, src->PaintedHeadSprites);
 	if (src->Corpse)
 		CSTRDUP(dst->Corpse, src->Corpse);
 }
@@ -424,6 +429,12 @@ static void LoadCharacterClass(CharacterClass *c, json_t *node)
 	c->Mass = CHARACTER_DEFAULT_MASS;
 	LoadInt(&c->Mass, node, "Mass");
 	c->Sprites = StrCharSpriteClass(c->Body);
+	LoadStr(&c->PaintedBody, node, "PaintedBody");
+	LoadStr(&c->PaintedHeadSprites, node, "PaintedHead");
+	if (c->PaintedBody != NULL)
+	{
+		c->PaintedSprites = StrCharSpriteClass(c->PaintedBody);
+	}
 
 	LoadStr(&c->Sounds, node, "Sounds");
 
@@ -465,6 +476,27 @@ static void CharacterClassFree(CharacterClass *c)
 	CFREE(c->Sounds);
 	CFREE(c->Footsteps);
 	CFREE(c->Corpse);
+	CFREE(c->PaintedBody);
+	CFREE(c->PaintedHeadSprites);
+}
+
+bool CharacterClassIsPainted(const CharacterClass *c)
+{
+	return c != NULL && c->PaintedSprites != NULL &&
+		   c->PaintedHeadSprites != NULL &&
+		   ConfigGetBool(&gConfig, "Graphics.PaintedCharacters");
+}
+const CharSprites *CharacterClassSprites(const CharacterClass *c)
+{
+	return CharacterClassIsPainted(c) ? c->PaintedSprites : c->Sprites;
+}
+const char *CharacterClassHeadSprites(const CharacterClass *c)
+{
+	return CharacterClassIsPainted(c) ? c->PaintedHeadSprites : c->HeadSprites;
+}
+bool CharacterClassHasHeadPart(const CharacterClass *c, const HeadPart hp)
+{
+	return !CharacterClassIsPainted(c) && c->HasHeadParts[hp];
 }
 void CharacterClassesTerminate(CharacterClasses *c)
 {

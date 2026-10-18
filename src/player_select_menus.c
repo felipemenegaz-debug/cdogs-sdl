@@ -741,7 +741,7 @@ static void CheckReenableHeadPartMenu(menu_t *menu, void *data)
 	char buf[256];
 	for (HeadPart hp = HEAD_PART_HAIR; hp < HEAD_PART_COUNT; hp++)
 	{
-		const bool hasPart = p->Char.Class->HasHeadParts[hp];
+		const bool hasPart = CharacterClassHasHeadPart(p->Char.Class, hp);
 		menu_t *submenu = MenuGetSubmenuByName(menu, HeadPartStr(hp));
 		CASSERT(submenu, "cannot find menu");
 		submenu->isDisabled = !hasPart;
