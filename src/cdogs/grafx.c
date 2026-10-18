@@ -59,6 +59,7 @@
 #include "blit.h"
 #include "config.h"
 #include "defs.h"
+#include "draw/draw_25d.h"
 #include "draw/drawtools.h"
 #include "files.h"
 #include "font_utils.h"
@@ -125,6 +126,7 @@ void GraphicsInitialize(GraphicsDevice *g)
 			windowDim.Pos = svec2i_zero();
 		}
 		LOG(LM_GFX, LL_DEBUG, "destroying previous renderer");
+		Draw25DResetTextures();
 		WindowContextDestroy(&g->gameWindow);
 		WindowContextDestroy(&g->secondWindow);
 		SDL_FreeFormat(g->Format);

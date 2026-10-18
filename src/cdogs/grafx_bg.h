@@ -38,6 +38,8 @@ typedef struct
 	uint8_t GuideImageAlpha;
 	bool HUD;
 	int FocusActorUID;
+	// Draw the world in 2.5D (see draw_25d.h)
+	bool Perspective;
 } DrawBufferArgs;
 
 void GrafxDrawBackground(

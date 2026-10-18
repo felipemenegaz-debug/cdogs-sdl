@@ -101,6 +101,15 @@ add_executable(color_test
 target_link_libraries(color_test cbehave ${EXTRA_LIBRARIES})
 add_test(NAME color_test COMMAND color_test)
 
+add_executable(perspective_test perspective_test.c)
+target_link_libraries(perspective_test
+	cbehave
+	cdogs
+	cdogs_proto
+	SDL2::SDL2
+	${EXTRA_LIBRARIES})
+add_test(NAME perspective_test COMMAND perspective_test)
+
 add_executable(config_test config_test.c)
 target_link_libraries(config_test
 	cbehave

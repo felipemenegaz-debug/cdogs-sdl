@@ -48,6 +48,7 @@
 */
 #pragma once
 
+#include "draw/draw_perspective.h"
 #include "map.h"
 
 typedef struct
@@ -60,6 +61,10 @@ typedef struct
 	struct vec2i Size;	// size in tiles
 	CArray tiles;	// of Tile *
 	CArray displaylist;	// of const Thing *, to determine draw order
+	struct vec2 Origin;	// map point at the centre of the view
+	// Set while the world is drawn in 2.5D, for overlays to follow it
+	bool UsePerspective;
+	DrawPerspective Perspective;
 } DrawBuffer;
 
 void DrawBufferInit(DrawBuffer *b, struct vec2i size, GraphicsDevice *g);

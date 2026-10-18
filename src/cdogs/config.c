@@ -650,6 +650,7 @@ Config ConfigDefault(void)
 				  "ScaleMode", SCALE_MODE_NN, SCALE_MODE_NN,
 				  SCALE_MODE_BILINEAR, StrScaleMode, ScaleModeStr));
 	ConfigGroupAdd(&gfx, ConfigNewBool("Shadows", true));
+	ConfigGroupAdd(&gfx, ConfigNewBool("Perspective", false));
 	ConfigGroupAdd(
 		&gfx, ConfigNewEnum(
 				  "Gore", GORE_LOW, GORE_NONE, GORE_HIGH, StrGoreAmount,

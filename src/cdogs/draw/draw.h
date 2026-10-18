@@ -54,3 +54,9 @@
 #define WALL_OFFSET_Y (-12)
 
 void DrawBufferDraw(DrawBuffer *b, struct vec2i offset, const DrawBufferArgs *args);
+
+// Shared with the 2.5D renderer
+color_t DrawTileLOSMask(const Tile *tile, const bool useFog);
+// Draw a thing with its classic sprite code, its position at picPos
+void DrawThingAt(const Thing *t, const struct vec2i picPos, const bool laserSight);
+void DrawThingLaserSight(const Thing *t, const struct vec2i picPos);

@@ -424,6 +424,7 @@ static void DoBuffer(
 	memset(&args, 0, sizeof args);
 	args.HUD = ConfigGetBool(&gConfig, "Graphics.ShowHUD");
 	args.FocusActorUID = camera->FocusActorUID;
+	args.Perspective = ConfigGetBool(&gConfig, "Graphics.Perspective");
 	DrawBufferDraw(&camera->Buffer, offset, &args);
 }
 

@@ -58,6 +58,8 @@
 #include "config.h"
 #include "door.h"
 #include "draw/draw.h"
+#include "draw/draw_25d.h"
+#include "draw/draw_perspective.h"
 #include "draw/draw_actor.h"
 #include "draw/drawtools.h"
 #include "font.h"
@@ -106,6 +108,30 @@ static color_t GetLOSMask(const Tile *tile, const bool useFog)
 		// don't draw
 		return colorTransparent;
 	}
+}
+color_t DrawTileLOSMask(const Tile *tile, const bool useFog)
+{
+	return GetLOSMask(tile, useFog);
+}
+// Screen position of a map point, for overlays drawn on top of the world.
+// bb is a screen-space offset that scales with distance in 2.5D.
+static struct vec2i WorldToScreen(
+	const DrawBuffer *b, const struct vec2 pos, const struct vec2 bb,
+	const struct vec2i offset)
+{
+	if (b->UsePerspective)
+	{
+		struct vec2 s;
+		if (DrawPerspectiveProject(&b->Perspective, pos, 0, bb, &s, NULL))
+		{
+			return svec2i_floor(s);
+		}
+	}
+	return svec2i_add(
+		svec2i_subtract(
+			svec2i_add(svec2i_floor(pos), svec2i_floor(bb)),
+			svec2i(b->xTop, b->yTop)),
+		offset);
 }
 static void DrawLOSPic(
 	const Tile *tile, const Pic *pic, const struct vec2i pos,
@@ -180,14 +206,22 @@ static void DrawExtra(
 void DrawBufferDraw(
 	DrawBuffer *b, struct vec2i offset, const DrawBufferArgs *args)
 {
-	// First draw the floor tiles (which do not obstruct anything)
-	DrawTiles(b, offset, DrawFloor, args);
-	// Then draw things that are below everything like debris (wrecks)
-	DrawTiles(b, offset, DrawThingsBelow, args);
-	// Now draw walls and (non-wreck) things in proper order
-	DrawTiles(b, offset, DrawWallsAndThings, args);
-	// Draw things that are above everything
-	DrawTiles(b, offset, DrawThingsAbove, args);
+	b->UsePerspective = false;
+	if (args->Perspective && Draw25DIsSupported())
+	{
+		Draw25DWorld(b, offset, args);
+	}
+	else
+	{
+		// First draw the floor tiles (which do not obstruct anything)
+		DrawTiles(b, offset, DrawFloor, args);
+		// Then draw things that are below everything like debris (wrecks)
+		DrawTiles(b, offset, DrawThingsBelow, args);
+		// Now draw walls and (non-wreck) things in proper order
+		DrawTiles(b, offset, DrawWallsAndThings, args);
+		// Draw things that are above everything
+		DrawTiles(b, offset, DrawThingsAbove, args);
+	}
 	if (args->HUD)
 	{
 		// Draw objective highlights, for visible and always-visible objectives
@@ -360,9 +394,8 @@ static void DrawObjectiveHighlights(
 
 	if (pic != NULL)
 	{
-		const struct vec2i picPos = svec2i_add(
-			svec2i_subtract(svec2i_floor(ti->Pos), svec2i(b->xTop, b->yTop)),
-			offset);
+		const struct vec2i picPos =
+			WorldToScreen(b, ti->Pos, svec2_zero(), offset);
 		color.a = (Uint8)Pulse256(gMission.time);
 		// Centre the drawing
 		const struct vec2i drawOffset = svec2i_scale_divide(pic->size, -2);
@@ -419,9 +452,10 @@ static void DrawChatters(
 	}
 	if (text)
 	{
-		const struct vec2i textPos = svec2i(
-			(int)a->thing.Pos.x - b->xTop + offset.x - FontStrW(text) / 2,
-			(int)a->thing.Pos.y - b->yTop + offset.y - ACTOR_HEIGHT);
+		const struct vec2i textPos = svec2i_subtract(
+			WorldToScreen(
+				b, a->thing.Pos, svec2(0, -ACTOR_HEIGHT), offset),
+			svec2i(FontStrW(text) / 2, 0));
 		FontStrMask(text, textPos, mask);
 	}
 	CA_FOREACH_END()
@@ -473,9 +507,9 @@ static void DrawPickupMenu(
 	size.y += ssize.y;
 	CA_FOREACH_END()
 
-	struct vec2i pos = svec2i(
-		(int)a->thing.Pos.x - b->xTop + offset.x - size.x / 2,
-		(int)a->thing.Pos.y - b->yTop + offset.y - size.y / 2);
+	struct vec2i pos = svec2i_subtract(
+		WorldToScreen(b, a->thing.Pos, svec2_zero(), offset),
+		svec2i_scale_divide(size, 2));
 	const int startX = pos.x;
 	// Draw box bg with a bit of padding
 	const color_t cbg = {64, 64, 64, 128};
@@ -508,7 +542,22 @@ static void DrawThing(DrawBuffer *b, const Thing *t, const struct vec2i offset)
 			svec2i_floor(svec2_add(t->Pos, t->drawShake)),
 			svec2i(b->xTop, b->yTop)),
 		offset);
+	DrawThingAt(t, picPos, true);
+}
 
+void DrawThingLaserSight(const Thing *t, const struct vec2i picPos)
+{
+	if (t->kind != KIND_CHARACTER || t->CPicFunc)
+	{
+		return;
+	}
+	const TActor *a = CArrayGet(&gActors, t->id);
+	ActorPics pics = GetCharacterPicsFromActor(a);
+	DrawLaserSight(&pics, a, picPos);
+}
+
+void DrawThingAt(const Thing *t, const struct vec2i picPos, const bool laserSight)
+{
 	if (!svec2i_is_zero(t->ShadowSize))
 	{
 		DrawShadow(
@@ -518,7 +567,7 @@ static void DrawThing(DrawBuffer *b, const Thing *t, const struct vec2i offset)
 
 	if (t->CPicFunc)
 	{
-		t->CPicFunc(b->g, t->id, picPos);
+		t->CPicFunc(&gGraphicsDevice, t->id, picPos);
 	}
 	else if (t->kind == KIND_CHARACTER)
 	{
@@ -526,7 +575,10 @@ static void DrawThing(DrawBuffer *b, const Thing *t, const struct vec2i offset)
 		ActorPics pics = GetCharacterPicsFromActor(a);
 		DrawActorPics(&pics, picPos, Rect2iZero());
 		// Draw weapon indicators
-		DrawLaserSight(&pics, a, picPos);
+		if (laserSight)
+		{
+			DrawLaserSight(&pics, a, picPos);
+		}
 	}
 	else
 	{

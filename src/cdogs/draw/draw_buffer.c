@@ -91,6 +91,7 @@ void DrawBufferSetFromMap(
 		CArrayInitFillZero(&buffer->tiles, sizeof(Tile *), view.x * view.y);
 	}
 
+	buffer->Origin = origin;
 	buffer->Size = svec2i(width, buffer->OrigSize.y);
 
 	buffer->xTop = (int)origin.x - TILE_WIDTH * width / 2;
