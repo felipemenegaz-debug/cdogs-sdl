@@ -168,7 +168,7 @@ static void DrawPlayerStatus(
 	DrawPlayerIcon(p, hud->device, &gPicManager, flags, flip, mask);
 
 	// Draw back bar, stretched across the screen
-	const Pic *backBar = PicManagerGetPic(&gPicManager, "hud/back_bar");
+	const Pic *backBar = PicManagerGetHUDPic(&gPicManager, "hud/back_bar");
 	const int barWidth = r.Size.x - 22;
 	struct vec2i barPos = svec2i(22, 0);
 	if (flags & HUDFLAGS_PLACE_RIGHT)
@@ -230,8 +230,8 @@ static void DrawPlayerIcon(
 	const TActor *a, GraphicsDevice *g, const PicManager *pm, const int flags,
 	const SDL_RendererFlip flip, const color_t mask)
 {
-	const Pic *framePic = PicManagerGetPic(pm, "hud/player_frame");
-	const Pic *underlayPic = PicManagerGetPic(pm, "hud/player_frame_underlay");
+	const Pic *framePic = PicManagerGetHUDPic(pm, "hud/player_frame");
+	const Pic *underlayPic = PicManagerGetHUDPic(pm, "hud/player_frame_underlay");
 	struct vec2i picPos = svec2i_zero();
 	if (flags & HUDFLAGS_PLACE_RIGHT)
 	{
@@ -342,7 +342,7 @@ static void DrawWeaponStatus(
 	const int flags, const Rect2i r, const color_t mask)
 {
 	// TODO: draw as gauge
-	const Pic *backPic = PicManagerGetPic(pm, "hud/gauge_small_back");
+	const Pic *backPic = PicManagerGetHUDPic(pm, "hud/gauge_small_back");
 	const struct vec2i backPicSize = svec2i(AMMO_WIDTH - 1, backPic->size.y);
 
 	// Aligned to the right
@@ -388,7 +388,7 @@ static void DrawWeaponStatus(
 		// Draw ammo level as inner fill
 		if (amount > 0)
 		{
-			const Pic *fillPic = PicManagerGetPic(pm, "hud/gauge_small_inner");
+			const Pic *fillPic = PicManagerGetHUDPic(pm, "hud/gauge_small_inner");
 			const int ammoMax = ammo->Max ? ammo->Max : amount;
 			const struct vec2i fillPicSize = svec2i(
 				MAX(1, (AMMO_WIDTH - 1) * amount / ammoMax), fillPic->size.y);
@@ -430,7 +430,7 @@ static void DrawWeaponStatus(
 		if (weapon->barrels[i].lock > 0)
 		{
 			const int maxLock = weapon->Gun->Lock;
-			const Pic *ballPic = PicManagerGetPic(pm, "hud/gauge_small_ball");
+			const Pic *ballPic = PicManagerGetHUDPic(pm, "hud/gauge_small_ball");
 			const int ballAreaWidth = AMMO_WIDTH - 6;
 			const struct vec2i ballPos = svec2i(
 				pos.x +
@@ -819,7 +819,7 @@ static void DrawCompassArrow(
 	const color_t tintedMask = ColorTint(mask, hsv);
 	struct vec2i textPos = svec2i_zero();
 	struct vec2i drawPos = svec2i_zero();
-	const Pic *p = PicManagerGetPic(&gPicManager, "hud/arrow");
+	const Pic *p = PicManagerGetHUDPic(&gPicManager, "hud/arrow");
 	// Find which edge of screen is the best
 	bool draw = false;
 	if (compassV.x != 0)

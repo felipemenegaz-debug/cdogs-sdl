@@ -42,7 +42,7 @@ void HUDDrawGauge(
 {
 	const int height = 10; // TODO: arbitrary height
 
-	const Pic *backPic = PicManagerGetPic(pm, "hud/gauge_back");
+	const Pic *backPic = PicManagerGetHUDPic(pm, "hud/gauge_back");
 	Draw9Slice(
 		g, backPic, Rect2iNew(pos, svec2i(width, height)), 0, 3, 0, 4, false,
 		backColor, SDL_FLIP_NONE);
@@ -59,7 +59,7 @@ void HUDDrawGaugeInner(
 {
 	const int height = 10; // TODO: arbitrary height
 
-	const Pic *innerPic = PicManagerGetPic(pm, "hud/gauge_inner");
+	const Pic *innerPic = PicManagerGetHUDPic(pm, "hud/gauge_inner");
 	Draw9Slice(
 		g, innerPic, Rect2iNew(pos, svec2i(width, height)), 0, 3, 0, 4, false,
 		barColor, SDL_FLIP_NONE);

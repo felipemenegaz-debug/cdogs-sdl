@@ -60,6 +60,11 @@ void PicManagerReloadTextures(PicManager *pm);
 // Note: return ptr to NamedPic so we can store that instead of the name
 NamedPic *PicManagerGetNamedPic(const PicManager *pm, const char *name);
 Pic *PicManagerGetPic(const PicManager *pm, const char *name);
+// A HUD or menu picture (hud/...): the painted one (pintado/<name>) if there
+// is one and Graphics.PaintedHUD is on
+Pic *PicManagerGetHUDPic(const PicManager *pm, const char *name);
+const NamedSprites *PicManagerGetHUDSprites(
+	const PicManager *pm, const char *name);
 // The name a loaded picture or sprite sheet is stored under (NULL if none);
 // slow, for use while loading
 const char *PicManagerFindPicName(const PicManager *pm, const Pic *pic);

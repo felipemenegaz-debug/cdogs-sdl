@@ -151,6 +151,8 @@ static menu_t *MenuCreateOptionsGraphics(
 		menu, ConfigGet(data->config, "Graphics.PaintedCharacters"));
 	MenuAddConfigOptionsItem(
 		menu, ConfigGet(data->config, "Graphics.PaintedScenery"));
+	MenuAddConfigOptionsItem(
+		menu, ConfigGet(data->config, "Graphics.PaintedHUD"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.HD"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.Gore"));
 	MenuAddConfigOptionsItem(menu, ConfigGet(data->config, "Graphics.Brass"));

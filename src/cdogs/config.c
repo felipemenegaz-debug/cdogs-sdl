@@ -697,6 +697,8 @@ Config ConfigDefault(void)
 	ConfigGroupAdd(&gfx, ConfigNewBool("PaintedCharacters", true));
 	// Painted floors and walls in every map (from the next map on)
 	ConfigGroupAdd(&gfx, ConfigNewBool("PaintedScenery", true));
+	// Painted HUD and menu frames (top bar, gauges, portrait, panels)
+	ConfigGroupAdd(&gfx, ConfigNewBool("PaintedHUD", true));
 	// Camera pitch and zoom (percent) of the 2.5D view
 	ConfigGroupAdd(
 		&gfx, ConfigNewEnum(

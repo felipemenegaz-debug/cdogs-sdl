@@ -358,11 +358,11 @@ static void DrawObjectiveHighlights(
 		{
 		case OBJECTIVE_KILL:
 		case OBJECTIVE_DESTROY: // fallthrough
-			pic = PicManagerGetPic(&gPicManager, "hud/objective_kill");
+			pic = PicManagerGetHUDPic(&gPicManager, "hud/objective_kill");
 			break;
 		case OBJECTIVE_RESCUE:
 		case OBJECTIVE_COLLECT: // fallthrough
-			pic = PicManagerGetPic(&gPicManager, "hud/objective_collect");
+			pic = PicManagerGetHUDPic(&gPicManager, "hud/objective_collect");
 			break;
 		default:
 			CASSERT(false, "unexpected objective to draw");

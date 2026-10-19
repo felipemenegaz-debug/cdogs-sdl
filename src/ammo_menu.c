@@ -155,7 +155,7 @@ void AmmoMenuCreate(
 	const struct vec2i size, EventHandlers *handlers, GraphicsDevice *graphics)
 {
 	menu->PlayerUID = playerUID;
-	menu->buttonBG = PicManagerGetPic(&gPicManager, "hud/button_bg");
+	menu->buttonBG = PicManagerGetHUDPic(&gPicManager, "hud/button_bg");
 	menu->idx = -1;
 	AmmoMenuReset(menu);
 
@@ -210,7 +210,7 @@ static void DrawMenu(
 	CA_FOREACH_END()
 
 	// Draw scroll buttons
-	const Pic *gradient = PicManagerGetPic(&gPicManager, "hud/gradient");
+	const Pic *gradient = PicManagerGetHUDPic(&gPicManager, "hud/gradient");
 	if (d->scroll > 0)
 	{
 		// TODO: test scrolling

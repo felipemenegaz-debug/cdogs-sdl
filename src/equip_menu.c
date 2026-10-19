@@ -170,7 +170,7 @@ static void DrawEquipSlot(
 		g, pData, pData->guns[slot], mask, svec2i(bgPos.x, bgPos.y + FontH()),
 		svec2i(slotSize.x, slotSize.y - 2 * FontH() - 1));
 
-	const Pic *arrow = PicManagerGetPic(&gPicManager, "hud/arrow");
+	const Pic *arrow = PicManagerGetHUDPic(&gPicManager, "hud/arrow");
 	const struct vec2i metaPos =
 		svec2i(pos.x + EQUIP_MENU_WIDTH / 2 - 6, y + 13);
 	const struct vec2i arrowPos = svec2i(metaPos.x - 4, metaPos.y);
@@ -521,7 +521,7 @@ void EquipMenuCreate(
 	menu->Cash = AnimatedCounterNew("Cash: $", pData->Totals.Score);
 	menu->Cash.incRatio = 0.2f;
 	menu->slotBGSprites =
-		PicManagerGetSprites(&gPicManager, "hud/gun_slot_bg");
+		PicManagerGetHUDSprites(&gPicManager, "hud/gun_slot_bg");
 	CArrayCopy(&menu->weapons, weapons);
 	CArrayInit(&menu->weaponIsNew, sizeof(bool));
 	CA_FOREACH(const WeaponClass *, wc, menu->weapons)

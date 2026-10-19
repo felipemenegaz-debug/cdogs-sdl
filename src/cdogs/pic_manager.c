@@ -609,6 +609,36 @@ const char *PicManagerFindSpritesName(
 	return d.name;
 }
 
+Pic *PicManagerGetHUDPic(const PicManager *pm, const char *name)
+{
+	if (ConfigGetBool(&gConfig, "Graphics.PaintedHUD"))
+	{
+		char buf[CDOGS_PATH_MAX];
+		sprintf(buf, "pintado/%s", name);
+		Pic *p = PicManagerGetPic(pm, buf);
+		if (p != NULL)
+		{
+			return p;
+		}
+	}
+	return PicManagerGetPic(pm, name);
+}
+const NamedSprites *PicManagerGetHUDSprites(
+	const PicManager *pm, const char *name)
+{
+	if (ConfigGetBool(&gConfig, "Graphics.PaintedHUD"))
+	{
+		char buf[CDOGS_PATH_MAX];
+		sprintf(buf, "pintado/%s", name);
+		const NamedSprites *s = PicManagerGetSprites(pm, buf);
+		if (s != NULL)
+		{
+			return s;
+		}
+	}
+	return PicManagerGetSprites(pm, name);
+}
+
 const NamedSprites *PicManagerGetSprites(
 	const PicManager *pm, const char *name)
 {

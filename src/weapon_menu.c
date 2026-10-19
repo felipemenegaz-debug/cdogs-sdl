@@ -209,7 +209,7 @@ void WeaponMenuCreate(
 	const struct vec2i size, EventHandlers *handlers, GraphicsDevice *graphics)
 {
 	menu->PlayerUID = playerUID;
-	menu->menuBGSprites = PicManagerGetSprites(&gPicManager, "hud/gun_bg");
+	menu->menuBGSprites = PicManagerGetHUDSprites(&gPicManager, "hud/gun_bg");
 	menu->weapons = weapons;
 	menu->weaponIsNew = weaponIsNew;
 	menu->slot = slot;
@@ -274,7 +274,7 @@ static void DrawMenu(
 	CA_FOREACH_END()
 
 	// Draw scroll buttons
-	const Pic *gradient = PicManagerGetPic(&gPicManager, "hud/gradient");
+	const Pic *gradient = PicManagerGetHUDPic(&gPicManager, "hud/gradient");
 	if (d->scroll > 0)
 	{
 		const Pic *scrollPic = CArrayGet(&d->menuBGSprites->pics, 0);
@@ -388,7 +388,7 @@ static void DrawGun(
 		FontStrOpt(buf, bgPos, foptsP);
 	}
 
-	const Pic *arrow = PicManagerGetPic(&gPicManager, "hud/arrow");
+	const Pic *arrow = PicManagerGetHUDPic(&gPicManager, "hud/arrow");
 	const struct vec2i metaPos = svec2i(bgPos.x + GUN_BG_W - 6, bgPos.y + 5);
 	const struct vec2i arrowPos = svec2i(metaPos.x - 4, metaPos.y);
 	switch (meta)

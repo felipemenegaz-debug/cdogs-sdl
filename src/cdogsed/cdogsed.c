@@ -1303,6 +1303,7 @@ int main(int argc, char *argv[])
 	// The editor shows each style and class as it is
 	ConfigGet(&gConfig, "Graphics.PaintedScenery")->u.Bool.Value = false;
 	ConfigGet(&gConfig, "Graphics.PaintedCharacters")->u.Bool.Value = false;
+	ConfigGet(&gConfig, "Graphics.PaintedHUD")->u.Bool.Value = false;
 	ConfigGet(&gConfig, "Graphics.WindowWidth")->u.Int.Value = 800;
 	ConfigGet(&gConfig, "Graphics.WindowHeight")->u.Int.Value = 600;
 	ConfigGet(&gConfig, "Graphics.SecondWindow")->u.Bool.Value = false;

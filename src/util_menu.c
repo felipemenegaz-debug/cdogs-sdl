@@ -165,7 +165,7 @@ void UtilMenuCreate(
 	const struct vec2i size, EventHandlers *handlers, GraphicsDevice *graphics)
 {
 	menu->PlayerUID = playerUID;
-	menu->buttonBG = PicManagerGetPic(&gPicManager, "hud/button_bg");
+	menu->buttonBG = PicManagerGetHUDPic(&gPicManager, "hud/button_bg");
 	menu->idx = -1;
 	UtilMenuReset(menu);
 
