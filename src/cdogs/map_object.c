@@ -338,6 +338,27 @@ static bool TryLoadMapObject(MapObject *m, json_t *node, const int version)
 				CFREE(picName);
 			}
 		}
+		// Painted version of an animated sheet, same frame count
+		if (version >= 2 && (m->Pic.Type == PICTYPE_ANIMATED ||
+							 m->Pic.Type == PICTYPE_ANIMATED_RANDOM))
+		{
+			char *spritesName = NULL;
+			LoadStr(&spritesName, normalNode->child, "Sprites");
+			if (spritesName != NULL)
+			{
+				char buf[CDOGS_PATH_MAX];
+				sprintf(buf, "pintado/%s", spritesName);
+				const NamedSprites *painted =
+					PicManagerGetSprites(&gPicManager, buf);
+				if (painted != NULL &&
+					painted->pics.size == m->Pic.u.Animated.Sprites->size)
+				{
+					m->PaintedPic = m->Pic;
+					m->PaintedPic.u.Animated.Sprites = &painted->pics;
+				}
+				CFREE(spritesName);
+			}
+		}
 	}
 	if (CPicIsLoaded(&m->Pic))
 	{
