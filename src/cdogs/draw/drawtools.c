@@ -235,7 +235,15 @@ void DrawShadow(
 	{
 		return;
 	}
-	const Pic *shadow = PicManagerGetPic(&gPicManager, "particles/shadow");
+	const Pic *shadow = NULL;
+	if (ConfigGetBool(&gConfig, "Graphics.PaintedCharacters"))
+	{
+		shadow = PicManagerGetPic(&gPicManager, "pintado/particles/shadow");
+	}
+	if (shadow == NULL)
+	{
+		shadow = PicManagerGetPic(&gPicManager, "particles/shadow");
+	}
 	const struct vec2 drawScale =
 		svec2_divide(svec2_scale(scale, 2), svec2_assign_vec2i(shadow->size));
 	const struct vec2i drawPos =
@@ -280,10 +288,10 @@ struct vec2i DrawButton(
 	switch (inputDevice)
 	{
 	case INPUT_DEVICE_KEYBOARD:
-		bg = PicManagerGetSprites(&gPicManager, "key_back");
+		bg = PicManagerGetHUDSprites(&gPicManager, "key_back");
 		break;
 	case INPUT_DEVICE_JOYSTICK:
-		bg = PicManagerGetSprites(&gPicManager, "button_back");
+		bg = PicManagerGetHUDSprites(&gPicManager, "button_back");
 		break;
 	default:
 		// Don't draw anything
@@ -310,7 +318,7 @@ struct vec2i DrawDirectionButtons(
 	{
 	case INPUT_DEVICE_KEYBOARD: {
 		const NamedSprites *ns =
-			PicManagerGetSprites(&gPicManager, "key_back");
+			PicManagerGetHUDSprites(&gPicManager, "key_back");
 		const Pic *bg = CArrayGet(&ns->pics, 0);
 		// Draw 4 keys in a cross shape followed by the direction names
 		for (int cmd = CMD_LEFT; cmd <= CMD_DOWN; cmd <<= 1)
@@ -365,7 +373,7 @@ struct vec2i DrawDirectionButtons(
 struct vec2i DrawKeyboardMenuButtons(const struct vec2i pos)
 {
 	// Draw the buttons used for menu navigation with a keyboard
-	const NamedSprites *ns = PicManagerGetSprites(&gPicManager, "key_back");
+	const NamedSprites *ns = PicManagerGetHUDSprites(&gPicManager, "key_back");
 	const Pic *bg = CArrayGet(&ns->pics, 0);
 	// Draw 4 keys in a cross shape followed by the direction names
 	for (int cmd = CMD_LEFT; cmd <= CMD_DOWN; cmd <<= 1)

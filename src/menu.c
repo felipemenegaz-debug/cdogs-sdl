@@ -531,7 +531,7 @@ void ShowControls(void)
 	pos.x += 4;
 	// Wider bg for enter/backspace
 	const NamedSprites *bg =
-		PicManagerGetSprites(&gPicManager, "key_back_wide");
+		PicManagerGetHUDSprites(&gPicManager, "key_back_wide");
 	pos = DrawOneButton(
 		bg, ENTER_CHAR, colorWhite,
 		KeyIsDown(&gEventHandlers.keyboard, SDL_SCANCODE_RETURN), pos);
