@@ -378,8 +378,11 @@ void MapAddPuzzleObjects(MapBuilder *mb)
 	{
 		return;
 	}
-	// The seal, in the middle of a roomy room
-	const MapObject *seal = StrMapObject("arena_seal");
+	// The seal, in the middle of a roomy room; not in missions without random
+	// enemies (only hand-placed ones), which have nothing to send
+	const MapObject *seal = mb->characters->baddieIds.size > 0
+								? StrMapObject("arena_seal")
+								: NULL;
 	for (int i = 0; seal != NULL && i < 3000; i++)
 	{
 		const struct vec2i v = MapGetRandomTile(mb->Map);
