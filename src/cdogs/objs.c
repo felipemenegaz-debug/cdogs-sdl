@@ -51,6 +51,7 @@
 #include <assert.h>
 
 #include "ai.h"
+#include "puzzles.h"
 #include "bullet_class.h"
 #include "damage.h"
 #include "gamedata.h"
@@ -210,6 +211,8 @@ void ObjRemove(const NMapObjectRemove mor)
 			e.u.Score.Score = OBJECT_SCORE;
 			GameEventsEnqueue(&gGameEvents, e);
 		}
+
+		PuzzlesOnObjectDestroyed(o);
 
 		// Switches open the doors of their colour, like a keycard
 		if (o->Class->Keys != 0)

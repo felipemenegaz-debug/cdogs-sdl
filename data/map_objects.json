@@ -2134,6 +2134,42 @@
       "Offset": [-6, -13],
       "Health": 0,
       "Flags": ["OnWall"]
+    },
+    {
+      "Name": "arena_seal",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "arena_seal"
+      },
+      "Wreck": "arena_seal_done",
+      "Health": 0,
+      "DrawBelow": true
+    },
+    {
+      "Name": "arena_seal_done",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "arena_seal_done"
+      },
+      "Health": 0,
+      "DrawBelow": true
+    },
+    {
+      "Name": "lever",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "lever"
+      },
+      "Wreck": "lever_down",
+      "Health": 5
+    },
+    {
+      "Name": "lever_down",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "lever_down"
+      },
+      "Health": 0
     }
   ]
 }

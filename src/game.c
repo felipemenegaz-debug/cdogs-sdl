@@ -67,6 +67,7 @@
 #include <cdogs/net_server.h>
 #include <cdogs/objs.h>
 #include <cdogs/pickup.h>
+#include <cdogs/puzzles.h>
 
 #include "briefing_screens.h"
 #include "loading_screens.h"
@@ -202,6 +203,7 @@ static void RunGameOnEnter(GameLoopData *data)
 			InitializeBadGuys();
 			CreateEnemies();
 		}
+		PuzzlesInit();
 	}
 
 	CameraInit(&rData->Camera);
@@ -723,6 +725,7 @@ void GameUpdate(RunGameData *data, const int ticksPerFrame, SoundDevice *sd)
 		{
 			const int enemies = AICommand(ticksPerFrame);
 			AIAddRandomEnemies(enemies, data->m->missionData);
+			PuzzlesUpdate(4);
 			data->aiUpdateCounter = 4;
 		}
 		else

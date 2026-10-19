@@ -47,6 +47,7 @@
 	POSSIBILITY OF SUCH DAMAGE.
 */
 #include "actors.h"
+#include "puzzles.h"
 
 #include <assert.h>
 #include <float.h>
@@ -700,6 +701,11 @@ static void CheckTrigger(const TActor *a, const Map *map)
 	const Tile *t = MapGetTile(map, tilePos);
 	const int keyFlags =
 		(a->flags & FLAGS_UNLOCK_DOORS) ? -1 : gMission.KeyFlags;
+	// Doors sealed by a puzzle stay shut until it is solved
+	if (PuzzlesIsDoorLocked(tilePos))
+	{
+		return;
+	}
 	CA_FOREACH(Trigger *, tp, t->triggers)
 	if (!TriggerTryActivate(*tp, keyFlags, tilePos) && (*tp)->isActive &&
 		TriggerCannotActivate(*tp) && showLocked)

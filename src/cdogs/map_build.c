@@ -58,6 +58,7 @@
 #include "map_static.h"
 #include "net_util.h"
 #include "objs.h"
+#include "puzzles.h"
 
 #define COLLECTABLE_W 4
 #define COLLECTABLE_H 3
@@ -484,6 +485,7 @@ void MapLoadDynamic(MapBuilder *mb)
 	{
 		AddKeys(mb);
 	}
+	MapAddPuzzleObjects(mb);
 }
 static bool MapTryPlaceBlowup(
 	MapBuilder *mb, const int objective, const bool strict);
