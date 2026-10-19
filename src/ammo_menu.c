@@ -408,8 +408,8 @@ static void DrawAmmoMenuItem(
 		CPicDrawContext c = CPicDrawContextNew();
 		const struct vec2i ammoPos = svec2i_subtract(
 			svec2i(x, bgPos.y + bgSize.y / 2),
-			svec2i_scale_divide(CPicGetPic(&a->Pic, 0)->size, 2));
-		CPicDraw(g, &a->Pic, ammoPos, &c);
+			svec2i_scale_divide(CPicGetPic(AmmoDrawCPic(a), 0)->size, 2));
+		CPicDraw(g, AmmoDrawCPic(a), ammoPos, &c);
 	}
 }
 static int HandleInputMenu(int cmd, void *data)

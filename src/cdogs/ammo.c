@@ -29,6 +29,7 @@
 
 #include <string.h>
 
+#include "config.h"
 #include "json_utils.h"
 #include "log.h"
 #include "pic_manager.h"
@@ -116,6 +117,15 @@ void AmmoLoadJSON(CArray *ammo, json_t *node)
 		CArrayPushBack(ammo, &a);
 	}
 }
+const CPic *AmmoDrawCPic(const Ammo *a)
+{
+	if (CPicIsLoaded(&a->PaintedPic) &&
+		ConfigGetBool(&gConfig, "Graphics.PaintedHUD"))
+	{
+		return &a->PaintedPic;
+	}
+	return &a->Pic;
+}
 static void LoadAmmo(Ammo *a, json_t *node, const int version)
 {
 	memset(a, 0, sizeof *a);
@@ -129,6 +139,7 @@ static void LoadAmmo(Ammo *a, json_t *node, const int version)
 	{
 		CPicLoadJSON(&a->Pic, picNode);
 	}
+	CPicGetPainted(&a->PaintedPic, &a->Pic);
 	a->Sound = GetString(node, "Sound");
 	LoadInt(&a->Amount, node, "Amount");
 	LoadInt(&a->Max, node, "Max");

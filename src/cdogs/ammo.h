@@ -37,6 +37,8 @@ typedef struct
 {
 	char *Name;
 	CPic Pic;
+	// Painted version of Pic (graphics/pintado), if there is one
+	CPic PaintedPic;
 	char *Sound;
 	int Amount;
 	int Max;
@@ -51,6 +53,8 @@ typedef struct
 extern AmmoClasses gAmmo;
 
 Ammo *StrAmmo(const char *s);
+// The picture to draw: the painted one with Graphics.PaintedHUD
+const CPic *AmmoDrawCPic(const Ammo *a);
 int StrAmmoId(const char *s);
 
 void AmmoInitialize(AmmoClasses *ammo, const char *path);

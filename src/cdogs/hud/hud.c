@@ -356,7 +356,8 @@ static void DrawKeycards(HUD *hud)
 		{
 			CPicDraw(
 				hud->device,
-				&KeyPickupClass(hud->mission->missionData->KeyStyle, i)->Pic,
+				PickupClassDrawCPic(
+					KeyPickupClass(hud->mission->missionData->KeyStyle, i)),
 				svec2i(CenterX(8) - xOffset, yOffset), NULL);
 		}
 		xOffset += xOffsetIncr;

@@ -487,7 +487,7 @@ static void DrawGunIcons(
 	{
 		const Ammo *ammo = AmmoGetById(&gAmmo, ammoId);
 		const struct vec2i ammoPos = svec2i_add(pos, svec2i(6, 5));
-		CPicDraw(g, &ammo->Pic, ammoPos, NULL);
+		CPicDraw(g, AmmoDrawCPic(ammo), ammoPos, NULL);
 	}
 
 	// Gun icon
