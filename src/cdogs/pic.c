@@ -335,12 +335,16 @@ void PicRender(
 	const double radians, const struct vec2 scale, const SDL_RendererFlip flip,
 	const Rect2i srcRect)
 {
+	// The source rect is in logical pixels; high-res pics have Scale texels each
+	const Rect2i srcTexels = Rect2iNew(
+		svec2i_scale(srcRect.Pos, PicScale(p)),
+		svec2i_scale(srcRect.Size, PicScale(p)));
 	Rect2i src = Rect2iNew(
-		svec2i_max(srcRect.Pos, svec2i_zero()), svec2i_zero()
+		svec2i_max(srcTexels.Pos, svec2i_zero()), svec2i_zero()
 	);
 	const struct vec2i srcSize = PicPixelSize(p);
-	src.Size = svec2i_is_zero(srcRect.Size) ? srcSize :
-		svec2i_min(svec2i_subtract(srcRect.Size, src.Pos), srcSize);
+	src.Size = svec2i_is_zero(srcTexels.Size) ? srcSize :
+		svec2i_min(svec2i_subtract(srcTexels.Size, src.Pos), srcSize);
 	Rect2i dest = Rect2iNew(pos, src.Size);
 	// Apply scale to render dest
 	const bool unscaled = svec2_is_equal(scale, svec2_one());
