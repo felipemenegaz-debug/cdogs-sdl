@@ -51,11 +51,11 @@ static void LazyLoad(LoadingScreen *l)
 {
 	if (l->logo == NULL)
 	{
-		l->logo = PicManagerGetPic(&gPicManager, "logo");
+		l->logo = PicManagerGetHUDPic(&gPicManager, "logo");
 	}
 	if (l->panel == NULL)
 	{
-		l->panel = PicManagerGetPic(&gPicManager, "bigpanel");
+		l->panel = PicManagerGetHUDPic(&gPicManager, "bigpanel");
 	}
 
 	// Init panel array large enough to cover the entire screen

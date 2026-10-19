@@ -848,7 +848,7 @@ static void MenuDisplayItems(const MenuSystem *ms)
 	}
 	if (d & MENU_DISPLAY_ITEMS_AUTHORS)
 	{
-		const Pic *logo = PicManagerGetPic(&gPicManager, "logo");
+		const Pic *logo = PicManagerGetHUDPic(&gPicManager, "logo");
 		const struct vec2i pos = svec2i(
 			MS_CENTER_X(*ms, logo->size.x), ms->pos.y + ms->size.y / 12);
 		PicRender(

@@ -42,6 +42,10 @@ typedef struct
 	bool Perspective;
 } DrawBufferArgs;
 
+// The painted backdrop (graphics/pintado/menu_bg) as the background layer,
+// covering the screen and multiplied by mask; false if Graphics.PaintedHUD is
+// off or there is none
+bool GrafxDrawPaintedBackground(GraphicsDevice *g, const color_t mask);
 void GrafxDrawBackground(
 	GraphicsDevice *g, DrawBuffer *buffer, const HSV tint,
 	const struct vec2 pos, const DrawBufferArgs *args);

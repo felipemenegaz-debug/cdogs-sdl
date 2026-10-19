@@ -28,6 +28,7 @@
 #include "grafx_bg.h"
 
 #include "actors.h"
+#include "config.h"
 #include "ai.h"
 #include "draw/draw.h"
 #include "draw/drawtools.h"
@@ -101,8 +102,53 @@ static void DrawBackground(
 	BlitClearBuf(g);
 }
 
+bool GrafxDrawPaintedBackground(GraphicsDevice *g, const color_t mask)
+{
+	if (!ConfigGetBool(&gConfig, "Graphics.PaintedHUD"))
+	{
+		return false;
+	}
+	const Pic *pic = PicManagerGetPic(&gPicManager, "pintado/menu_bg");
+	if (pic == NULL)
+	{
+		return false;
+	}
+	// The map layer (bkg) goes over this one: leave it empty (transparent)
+	BlitClearBuf(g);
+	BlitUpdateFromBuf(g, g->bkg);
+	WindowContext *wc = &g->gameWindow;
+	if (SDL_SetRenderTarget(wc->renderer, g->bkgTgt) != 0)
+	{
+		LOG(LM_GFX, LL_ERROR, "cannot set render target: %s", SDL_GetError());
+		return false;
+	}
+	SDL_SetRenderDrawColor(wc->renderer, 0, 0, 0, 255);
+	SDL_RenderClear(wc->renderer);
+	// Cover the screen, centred (PicRender scales about the picture's centre)
+	const struct vec2i res = g->cachedConfig.Res;
+	const float s = MAX(
+		(float)res.x / pic->size.x, (float)res.y / pic->size.y);
+	const struct vec2i pos = svec2i(
+		(res.x - pic->size.x) / 2, (res.y - pic->size.y) / 2);
+	PicRender(
+		pic, wc->renderer, pos, colorWhite, 0, svec2(s, s), SDL_FLIP_NONE,
+		Rect2iZero());
+	if (SDL_SetRenderTarget(wc->renderer, NULL) != 0)
+	{
+		LOG(LM_GFX, LL_ERROR, "cannot set render target: %s", SDL_GetError());
+	}
+	wc->bkgMask = mask;
+	return true;
+}
+
 void GrafxRedrawBackground(GraphicsDevice *g, const struct vec2 pos)
 {
+	// Behind the end-of-game screens: the painted backdrop, dimmed
+	const color_t dim = {0x70, 0x70, 0x80, 0xff};
+	if (GrafxDrawPaintedBackground(g, dim))
+	{
+		return;
+	}
 	memset(g->buf, 0, GraphicsGetMemSize(&g->cachedConfig));
 	DrawBuffer buffer;
 	DrawBufferInit(&buffer, svec2i(X_TILES, Y_TILES), g);

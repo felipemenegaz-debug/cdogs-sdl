@@ -276,6 +276,10 @@ static void MainMenuDraw(GameLoopData *data)
 	const struct vec2 pos = svec2(
 		(gMap.Size.x + 1) * TILE_WIDTH * 0.5f,
 		(gMap.Size.y + 1) * TILE_HEIGHT * 0.5f);
+	if (GrafxDrawPaintedBackground(mData->graphics, colorWhite))
+	{
+		return;
+	}
 	DrawBufferArgs args;
 	memset(&args, 0, sizeof args);
 	GrafxDrawBackground(
