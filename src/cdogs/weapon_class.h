@@ -75,6 +75,9 @@ typedef enum
 typedef struct
 {
 	const Pic *Icon;
+	// Painted icon (graphics/pintado/<icon>), used with
+	// Graphics.PaintedCharacters
+	const Pic *PaintedIcon;
 	GunType Type;
 	union {
 		struct
@@ -137,6 +140,9 @@ void WeaponClassesLoadJSON(WeaponClasses *wcs, CArray *classes, json_t *root);
 void WeaponClassesClear(CArray *classes);
 void WeaponClassesTerminate(WeaponClasses *wcs);
 const WeaponClass *StrWeaponClass(const char *s);
+// The icon to draw in the HUD and menus: the painted one if there is one and
+// Graphics.PaintedCharacters is on
+const Pic *WeaponClassGetIcon(const WeaponClass *wc);
 WeaponClass *IdWeaponClass(const int i);
 int WeaponClassId(const WeaponClass *wc);
 struct vec2 WeaponClassGetBarrelMuzzleOffset(

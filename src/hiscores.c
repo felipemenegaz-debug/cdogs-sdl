@@ -229,7 +229,7 @@ static int DisplayEntry(
 	if (wc && wc->Icon)
 	{
 		PicRender(
-			wc->Icon, gGraphicsDevice.gameWindow.renderer,
+			WeaponClassGetIcon(wc), gGraphicsDevice.gameWindow.renderer,
 			svec2i(x + FAV_WEP_OFFSET - 15, y), colorWhite, 0, svec2_one(),
 			SDL_FLIP_NONE, Rect2iZero());
 	}

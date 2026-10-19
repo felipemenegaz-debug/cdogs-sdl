@@ -154,7 +154,7 @@ static void DrawEquipSlot(
 	FontStrOpt(label, pos, fopts);
 
 	const Pic *gunIcon = pData->guns[slot]
-							 ? pData->guns[slot]->Icon
+							 ? WeaponClassGetIcon(pData->guns[slot])
 							 : PicManagerGetPic(&gPicManager, "peashooter");
 	// Draw icon at center of slot
 	const struct vec2i slotSize = svec2i(EQUIP_MENU_WIDTH / 2, h);

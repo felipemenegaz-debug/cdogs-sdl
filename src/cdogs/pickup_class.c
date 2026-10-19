@@ -476,6 +476,7 @@ void PickupClassesLoadGuns(CArray *classes, const CArray *gunClasses)
 	sprintf(buf, "gun_%s", wc->name);
 	CSTRDUP(c.Name, buf);
 	CPicInitNormal(&c.Pic, wc->Icon);
+	CPicGetPainted(&c.PaintedPic, &c.Pic);
 	PickupEffect p;
 	p.Type = PICKUP_GUN;
 	p.u.GunId = WeaponClassId(wc);

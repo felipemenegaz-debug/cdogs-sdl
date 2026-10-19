@@ -367,7 +367,7 @@ static void DrawGun(
 
 	// Draw icon at center of slot
 	const Pic *gunIcon =
-		wc ? wc->Icon : PicManagerGetPic(&gPicManager, "peashooter");
+		wc ? WeaponClassGetIcon(wc) : PicManagerGetPic(&gPicManager, "peashooter");
 	const struct vec2i gunPos = svec2i_subtract(
 		svec2i_add(bgPos, svec2i_scale_divide(bgSize, 2)),
 		svec2i_scale_divide(gunIcon->size, 2));

@@ -490,7 +490,8 @@ static void DrawGunIcons(
 			? colorDarkGray
 			: colorWhite;
 	PicRender(
-		wc->Icon, g->gameWindow.renderer, pos, gunIconMask, 0.0, svec2_one(),
+		WeaponClassGetIcon(wc), g->gameWindow.renderer, pos, gunIconMask, 0.0,
+		svec2_one(),
 		SDL_FLIP_NONE, Rect2iZero());
 }
 
@@ -530,7 +531,7 @@ static void DrawGrenadeStatus(
 	// amount as text
 	const bool useAmmo = gCampaign.Setting.Ammo && wc->u.Normal.AmmoId >= 0;
 	const int amount = useAmmo ? ActorWeaponGetAmmo(a, wc, 0) : -1;
-	const Pic *icon = wc->Icon;
+	const Pic *icon = WeaponClassGetIcon(wc);
 	if (useAmmo && amount > 0 && amount <= MAX_GRENADE_ICONS)
 	{
 		DrawGrenadeIcons(g, h, icon, pos, GRENADES_WIDTH, amount);

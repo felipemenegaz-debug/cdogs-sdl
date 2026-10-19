@@ -28,6 +28,7 @@
 #include "weapon_class.h"
 
 #include "ammo.h"
+#include "config.h"
 #include "game_events.h"
 #include "json_utils.h"
 #include "log.h"
@@ -403,6 +404,28 @@ static void LoadWeaponClass(WeaponClass *wc, json_t *node, const int version)
 	}
 
 	LOG(LM_MAP, LL_DEBUG, "price(%d) overheatTicks(%d)", wc->Price, wc->OverheatTicks);
+
+	wc->PaintedIcon = NULL;
+	if (wc->Icon != NULL)
+	{
+		CPic iconPic, painted;
+		memset(&iconPic, 0, sizeof iconPic);
+		iconPic.Type = PICTYPE_NORMAL;
+		iconPic.u.Pic = wc->Icon;
+		if (CPicGetPainted(&painted, &iconPic))
+		{
+			wc->PaintedIcon = painted.u.Pic;
+		}
+	}
+}
+const Pic *WeaponClassGetIcon(const WeaponClass *wc)
+{
+	if (wc->PaintedIcon != NULL &&
+		ConfigGetBool(&gConfig, "Graphics.PaintedCharacters"))
+	{
+		return wc->PaintedIcon;
+	}
+	return wc->Icon;
 }
 void WeaponClassesTerminate(WeaponClasses *wcs)
 {
