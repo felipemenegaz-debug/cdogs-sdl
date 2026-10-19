@@ -29,7 +29,9 @@
 #include "ai_coop.h"
 
 #include "ai_utils.h"
+#include "config.h"
 #include "gamedata.h"
+#include "objs.h"
 #include "pickup.h"
 
 // How many ticks to stay in one confusion state
@@ -113,6 +115,62 @@ static int SmartGoto(
 static bool TryCompleteNearbyObjective(
 	TActor *actor, const TActor *closestPlayer,
 	const float distanceTooFarFromPlayer, int *cmdOut);
+// Puzzle objects worth a shot: switches, standing levers, barricades
+#define PUZZLE_SIGHT (10 * 16)
+static bool IsPuzzleTarget(const TActor *actor, const TObject *o)
+{
+	const char *name = o->Class->Name;
+	if (strncmp(name, "switch_", 7) == 0 && strcmp(name, "switch_used") != 0)
+	{
+		return true;
+	}
+	if (strcmp(name, "lever") == 0 || strcmp(name, "barricade") == 0)
+	{
+		return true;
+	}
+	UNUSED(actor);
+	return false;
+}
+static const TObject *FindPuzzleTarget(const TActor *actor)
+{
+	if (!ConfigGetBool(&gConfig, "Game.Puzzles"))
+	{
+		return NULL;
+	}
+	const TObject *best = NULL;
+	float bestD2 = SQUARED(PUZZLE_SIGHT);
+	CA_FOREACH(const TObject, o, gObjs)
+	if (!o->isInUse || o->Health <= 0)
+	{
+		continue;
+	}
+	const float d2 = svec2_distance_squared(actor->Pos, o->thing.Pos);
+	if (d2 >= bestD2 || !IsPuzzleTarget(actor, o) ||
+		!AIHasClearShot(actor->Pos, o->thing.Pos))
+	{
+		continue;
+	}
+	best = o;
+	bestD2 = d2;
+	CA_FOREACH_END()
+	// For a barricade, the skull barrel beside it does the job faster
+	if (best != NULL && strcmp(best->Class->Name, "barricade") == 0)
+	{
+		CA_FOREACH(const TObject, o, gObjs)
+		if (o->isInUse && o->Health > 0 &&
+			strcmp(o->Class->Name, "barrel_skull") == 0 &&
+			svec2_distance_squared(o->thing.Pos, best->thing.Pos) <
+				SQUARED(40) &&
+			svec2_distance_squared(actor->Pos, o->thing.Pos) > SQUARED(3 * 16) &&
+			AIHasClearShot(actor->Pos, o->thing.Pos))
+		{
+			return o;
+		}
+		CA_FOREACH_END()
+	}
+	return best;
+}
+
 static int AICoopGetCmdNormal(TActor *actor)
 {
 	// Use decision tree to command the AI
@@ -295,6 +353,15 @@ static int AICoopGetCmdNormal(TActor *actor)
 			}
 			return AIAttack(actor, closestEnemy->Pos);
 		}
+	}
+
+	// Puzzles (Game.Puzzles): shoot switches, levers and barricades in sight
+	const TObject *puzzle = FindPuzzleTarget(actor);
+	if (puzzle != NULL)
+	{
+		ActorSetAIState(actor, AI_STATE_HUNT);
+		actor->aiContext->EnemyId = -1;
+		return AIAttack(actor, puzzle->thing.Pos);
 	}
 
 	// Look for objectives nearby to complete
