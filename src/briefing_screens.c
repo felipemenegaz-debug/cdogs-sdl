@@ -131,6 +131,7 @@ static void CampaignIntroDraw(GameLoopData *data)
 {
 	const ScreenCampaignIntroData *sData = data->Data;
 
+	GrafxDrawPaintedScreen(&gGraphicsDevice);
 	BlitClearBuf(&gGraphicsDevice);
 	const int w = gGraphicsDevice.cachedConfig.Res.x;
 	const int h = gGraphicsDevice.cachedConfig.Res.y;
@@ -329,6 +330,7 @@ static void MissionBriefingDraw(GameLoopData *data)
 {
 	const MissionBriefingScreenData *mData = data->Data;
 
+	GrafxDrawPaintedScreen(&gGraphicsDevice);
 	BlitClearBuf(&gGraphicsDevice);
 
 	// Display description with typewriter effect
@@ -652,6 +654,7 @@ static void MissionSummaryDraw(GameLoopData *data)
 {
 	const MissionSummaryData *mData = data->Data;
 
+	GrafxDrawPaintedScreen(&gGraphicsDevice);
 	MenuDraw(&mData->ms);
 }
 static bool AreAnySurvived(void)

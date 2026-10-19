@@ -46,6 +46,9 @@ typedef struct
 // covering the screen and multiplied by mask; false if Graphics.PaintedHUD is
 // off or there is none
 bool GrafxDrawPaintedBackground(GraphicsDevice *g, const color_t mask);
+// The painted backdrop, dimmed, with a painted plate behind the text of the
+// briefing and summary screens (Graphics.PaintedHUD)
+bool GrafxDrawPaintedScreen(GraphicsDevice *g);
 void GrafxDrawBackground(
 	GraphicsDevice *g, DrawBuffer *buffer, const HSV tint,
 	const struct vec2 pos, const DrawBufferArgs *args);

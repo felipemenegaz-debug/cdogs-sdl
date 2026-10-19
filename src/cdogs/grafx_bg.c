@@ -32,6 +32,7 @@
 #include "ai.h"
 #include "draw/draw.h"
 #include "draw/drawtools.h"
+#include "draw/nine_slice.h"
 #include "game_events.h"
 #include "handle_game_events.h"
 #include "log.h"
@@ -102,7 +103,8 @@ static void DrawBackground(
 	BlitClearBuf(g);
 }
 
-bool GrafxDrawPaintedBackground(GraphicsDevice *g, const color_t mask)
+static bool DrawPainted(
+	GraphicsDevice *g, const color_t mask, const bool withPanel)
 {
 	if (!ConfigGetBool(&gConfig, "Graphics.PaintedHUD"))
 	{
@@ -131,14 +133,33 @@ bool GrafxDrawPaintedBackground(GraphicsDevice *g, const color_t mask)
 	const struct vec2i pos = svec2i(
 		(res.x - pic->size.x) / 2, (res.y - pic->size.y) / 2);
 	PicRender(
-		pic, wc->renderer, pos, colorWhite, 0, svec2(s, s), SDL_FLIP_NONE,
+		pic, wc->renderer, pos, mask, 0, svec2(s, s), SDL_FLIP_NONE,
 		Rect2iZero());
+	// A painted plate behind the text of the briefing and summary screens
+	const Pic *panel = PicManagerGetPic(&gPicManager, "pintado/briefing_panel");
+	if (withPanel && panel != NULL)
+	{
+		const struct vec2i margin = svec2i(res.x / 20, res.y / 16);
+		Draw9Slice(
+			g, panel,
+			Rect2iNew(margin, svec2i_subtract(res, svec2i_scale(margin, 2))),
+			12, 12, 12, 12, false, colorWhite, SDL_FLIP_NONE);
+	}
 	if (SDL_SetRenderTarget(wc->renderer, NULL) != 0)
 	{
 		LOG(LM_GFX, LL_ERROR, "cannot set render target: %s", SDL_GetError());
 	}
-	wc->bkgMask = mask;
+	wc->bkgMask = colorWhite;
 	return true;
+}
+bool GrafxDrawPaintedBackground(GraphicsDevice *g, const color_t mask)
+{
+	return DrawPainted(g, mask, false);
+}
+bool GrafxDrawPaintedScreen(GraphicsDevice *g)
+{
+	const color_t dim = {0x60, 0x60, 0x70, 0xff};
+	return DrawPainted(g, dim, true);
 }
 
 void GrafxRedrawBackground(GraphicsDevice *g, const struct vec2 pos)
