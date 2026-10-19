@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "blit.h"
+#include "config.h"
 #include "log.h"
 #include "pic.h"
 #include "sys_config.h"
@@ -38,6 +39,17 @@
 #define LAST_CHAR 255
 
 Font gFont;
+Font gFontPainted;
+
+static const Font *CurrentFont(void)
+{
+	if (gFontPainted.Chars.size > 0 &&
+		ConfigGetBool(&gConfig, "Graphics.PaintedHUD"))
+	{
+		return &gFontPainted;
+	}
+	return &gFont;
+}
 
 FontOpts FontOptsNew(void)
 {
@@ -69,9 +81,12 @@ void FontLoad(
 	CArrayInit(&f->Chars, sizeof(Pic));
 
 	// Check that the image is big enough for the dimensions
-	const struct vec2i step = svec2i(
-		f->Size.x + f->Padding.Left + f->Padding.Right,
-		f->Size.y + f->Padding.Top + f->Padding.Bottom);
+	const int scale = f->Scale > 1 ? f->Scale : 1;
+	const struct vec2i step = svec2i_scale(
+		svec2i(
+			f->Size.x + f->Padding.Left + f->Padding.Right,
+			f->Size.y + f->Padding.Top + f->Padding.Bottom),
+		scale);
 	if (step.x * f->Stride > image->w || step.y > image->h)
 	{
 		LOG(LM_GFX, LL_ERROR,
@@ -95,14 +110,15 @@ void FontLoad(
 			 pos.x += step.x, x++, chars++)
 		{
 			Pic p;
-			// TODO: HD fonts
 			PicLoad(
-				&p, f->Size,
-				svec2i_add(pos, svec2i(f->Padding.Left, f->Padding.Top)),
-				image, false);
+				&p, svec2i_scale(f->Size, scale),
+				svec2i_add(
+					pos, svec2i_scale(
+							 svec2i(f->Padding.Left, f->Padding.Top), scale)),
+				image, scale);
 			if (chars == ' ')
 			{
-				PicShrink(&p, spaceSize, svec2i_zero());
+				PicShrink(&p, svec2i_scale(spaceSize, scale), svec2i_zero());
 			}
 			else if (isProportional)
 			{
@@ -123,12 +139,14 @@ void FontTerminate(Font *f)
 
 int FontW(const char c)
 {
-	const Pic *p = CArrayGet(&gFont.Chars, (int)c - FIRST_CHAR);
-	return p->size.x + gFont.Gap.x;
+	const Font *f = CurrentFont();
+	const Pic *p = CArrayGet(&f->Chars, (int)c - FIRST_CHAR);
+	return p->size.x + f->Gap.x;
 }
 int FontH(void)
 {
-	return gFont.Size.y + gFont.Gap.y;
+	const Font *f = CurrentFont();
+	return f->Size.y + f->Gap.y;
 }
 struct vec2i FontChSize(const char c)
 {
@@ -217,12 +235,13 @@ struct vec2i FontChMask(
 		fprintf(stderr, "invalid char %d\n", idx);
 		idx = FIRST_CHAR;
 	}
-	const Pic *pic = CArrayGet(&gFont.Chars, idx);
+	const Font *f = CurrentFont();
+	const Pic *pic = CArrayGet(&f->Chars, idx);
 	PicRender(
 		pic, gGraphicsDevice.gameWindow.renderer, pos, mask, 0, svec2_one(),
 		SDL_FLIP_NONE, Rect2iZero());
 	// Add gap between characters
-	return svec2i(pos.x + pic->size.x + gFont.Gap.x, pos.y);
+	return svec2i(pos.x + pic->size.x + f->Gap.x, pos.y);
 }
 struct vec2i FontStr(const char *s, struct vec2i pos)
 {

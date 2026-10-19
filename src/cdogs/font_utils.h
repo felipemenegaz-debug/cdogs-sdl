@@ -25,6 +25,11 @@
 */
 #pragma once
 
+#include <stdbool.h>
+
 #include "font.h"
 
 void FontLoadFromJSON(Font *f, const char *imgPath, const char *jsonPath);
+// The game's font, plus the painted one when the HD art is in use
+void FontLoadGame(const bool hd);
+void FontTerminateGame(void);

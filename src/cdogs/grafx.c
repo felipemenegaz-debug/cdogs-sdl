@@ -176,7 +176,7 @@ void GraphicsInitialize(GraphicsDevice *g)
 
 		// Need to reload textures due to them tied to the renderer (window)
 		PicManagerReloadTextures(&gPicManager);
-		FontLoadFromJSON(&gFont, "graphics/font.png", "graphics/font.json");
+		FontLoadGame(g->HD);
 	}
 
 	if (initTextures)

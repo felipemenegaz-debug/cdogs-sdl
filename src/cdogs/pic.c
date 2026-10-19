@@ -269,6 +269,11 @@ void PicTrim(Pic *pic, const bool xTrim, const bool yTrim)
 	struct vec2i offset = svec2i_zero();
 	if (min.x < max.x && min.y < max.y)
 	{
+		// High-res pics trim to whole logical pixels
+		const int scale = PicScale(pic);
+		min = svec2i(min.x / scale * scale, min.y / scale * scale);
+		max = svec2i(
+			(max.x / scale + 1) * scale - 1, (max.y / scale + 1) * scale - 1);
 		if (xTrim)
 		{
 			newSize.x = max.x - min.x + 1;
@@ -285,6 +290,7 @@ void PicTrim(Pic *pic, const bool xTrim, const bool yTrim)
 void PicShrink(Pic *pic, const struct vec2i size, const struct vec2i offset)
 {
 	// Trim by copying pixels
+	const int srcW = PicPixelSize(pic).x;
 	Uint32 *newData;
 	CMALLOC(newData, size.x * size.y * sizeof *newData);
 	if (newData == NULL)
@@ -296,8 +302,7 @@ void PicShrink(Pic *pic, const struct vec2i size, const struct vec2i offset)
 		for (pos.x = 0; pos.x < size.x; pos.x++)
 		{
 			Uint32 *target = newData + pos.x + pos.y * size.x;
-			const int srcIdx =
-				pos.x + offset.x + (pos.y + offset.y) * pic->size.x;
+			const int srcIdx = pos.x + offset.x + (pos.y + offset.y) * srcW;
 			*target = *(pic->Data + srcIdx);
 		}
 	}

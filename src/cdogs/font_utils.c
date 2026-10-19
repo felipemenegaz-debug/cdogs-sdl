@@ -25,6 +25,9 @@
 */
 #include "font_utils.h"
 
+#include <stdio.h>
+#include <string.h>
+
 #include "log.h"
 #include "sys_config.h"
 #include "yajl_utils.h"
@@ -57,6 +60,7 @@ void FontLoadFromJSON(Font *f, const char *imgPath, const char *jsonPath)
 	}
 
 	YAJLVec2i(&f->Gap, node, "Gap");
+	YAJLInt(&f->Scale, node, "Scale");
 	bool proportional = false;
 	YAJLBool(&proportional, node, "Proportional");
 	struct vec2i spaceSize = f->Size;
@@ -66,4 +70,31 @@ void FontLoadFromJSON(Font *f, const char *imgPath, const char *jsonPath)
 
 bail:
 	yajl_tree_free(node);
+}
+
+#define PAINTED_FONT "graphics_4x/pintado/font"
+void FontLoadGame(const bool hd)
+{
+	FontTerminateGame();
+	FontLoadFromJSON(&gFont, "graphics/font.png", "graphics/font.json");
+	if (!hd)
+	{
+		return;
+	}
+	char buf[CDOGS_PATH_MAX];
+	GetDataFilePath(buf, PAINTED_FONT ".json");
+	FILE *fp = fopen(buf, "r");
+	if (fp == NULL)
+	{
+		return;
+	}
+	fclose(fp);
+	FontLoadFromJSON(&gFontPainted, PAINTED_FONT ".png", PAINTED_FONT ".json");
+}
+void FontTerminateGame(void)
+{
+	FontTerminate(&gFont);
+	FontTerminate(&gFontPainted);
+	memset(&gFont, 0, sizeof gFont);
+	memset(&gFontPainted, 0, sizeof gFontPainted);
 }

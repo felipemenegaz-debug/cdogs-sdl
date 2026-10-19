@@ -52,6 +52,8 @@ typedef struct
 		int Bottom;
 	} Padding;
 	struct vec2i Gap;
+	// Pixels per logical pixel of the sheet; Size, Gap and Padding stay logical
+	int Scale;
 	CArray Chars; // of Pic
 } Font;
 
@@ -71,6 +73,8 @@ typedef struct
 } FontOpts;
 
 extern Font gFont;
+// The painted font (HD only), used instead of gFont with Graphics.PaintedHUD
+extern Font gFontPainted;
 
 FontOpts FontOptsNew(void);
 

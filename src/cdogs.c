@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 		err = EXIT_FAILURE;
 		goto bail;
 	}
-	FontLoadFromJSON(&gFont, "graphics/font.png", "graphics/font.json");
+	FontLoadGame(gGraphicsDevice.HD);
 	LoadingScreenInit(&gLoadingScreen, &gGraphicsDevice);
 	LoadingScreenDraw(&gLoadingScreen, "Loading graphics...", 0.0f);
 	PicManagerLoad(&gPicManager);
@@ -318,7 +318,7 @@ bail:
 
 	CharSpriteClassesTerminate(&gCharSpriteClasses);
 	PicManagerTerminate(&gPicManager);
-	FontTerminate(&gFont);
+	FontTerminateGame();
 	GraphicsTerminate(&gGraphicsDevice);
 	AutosaveSave(&gAutosave, GetConfigFilePath(AUTOSAVE_FILE));
 	AutosaveTerminate(&gAutosave);
