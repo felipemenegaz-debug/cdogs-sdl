@@ -144,7 +144,7 @@ static void SealLock(const TObject *seal)
 		{
 			const struct vec2i v = svec2i(c.x + dx, c.y + dy);
 			const Tile *t = MapGetTile(&gMap, v);
-			if (t != NULL && t->Door.Class != NULL)
+			if (t != NULL && t->Class->Type == TILE_CLASS_DOOR)
 			{
 				CArrayPushBack(&sSeal.LockedTiles, &v);
 			}
