@@ -101,6 +101,8 @@ typedef struct
 	struct vec2i Size;
 	struct vec2 PosOffset;
 	int Health;
+	// Enemies called in a wave when this object is destroyed (Game.Waves)
+	int Reinforcements;
 	// Guns that are fired when this map object is destroyed
 	// i.e. explosion on destruction
 	CArray DestroyGuns; // of const WeaponClass *

@@ -50,6 +50,7 @@
 
 #include <assert.h>
 
+#include "ai.h"
 #include "bullet_class.h"
 #include "damage.h"
 #include "gamedata.h"
@@ -208,6 +209,12 @@ void ObjRemove(const NMapObjectRemove mor)
 			e.u.Score.PlayerUID = playerUID;
 			e.u.Score.Score = OBJECT_SCORE;
 			GameEventsEnqueue(&gGameEvents, e);
+		}
+
+		// Some objects (generators) call a wave of enemies
+		if (o->Class->Reinforcements > 0)
+		{
+			AIAddReinforcements(o->Class->Reinforcements);
 		}
 
 		// Weapons that go off when this object is destroyed

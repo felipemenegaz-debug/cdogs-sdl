@@ -608,6 +608,9 @@ GameLoopData *GameOptions(const GameMode gm)
 	case GAME_MODE_NORMAL:
 		I("Game.Difficulty");
 		I("Game.EnemyDensity");
+		I("Game.Waves");
+		I("Game.MaxShooters");
+		I("Game.Puzzles");
 		I("Game.NonPlayerHP");
 		if (gCampaign.Setting.PlayerMaxHP == 0)
 		{

@@ -2018,6 +2018,31 @@
       "Offset": [-7, -11],
       "Health": 0,
       "Flags": ["OnWall"]
+    },
+    {
+      "Name": "generator",
+      "Pic": {
+        "Type": "Animated",
+        "Sprites": "generator",
+        "TicksPerFrame": 8
+      },
+      "Wreck": "generator_wreck",
+      "Health": 120,
+      "Reinforcements": 4,
+      "DestroyGuns": ["explosion1"],
+      "DamageSmoke": {
+        "HealthThreshold": 0.5
+      }
+    },
+    {
+      "Name": "generator_wreck",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "generator_wreck"
+      },
+      "Health": 0,
+      "DrawBelow": true,
+      "FootstepSound": "footsteps/gravel"
     }
   ]
 }

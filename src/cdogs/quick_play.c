@@ -377,6 +377,21 @@ static void AddMission(
 		o.Required = RAND_INT(MAX(1, o.Count / 2), o.Count);
 		o.Flags = OBJECTIVE_POSKNOWN;
 		CArrayPushBack(&m.Objectives, &o);
+
+		// Puzzle: generators seal the exit; each one destroyed calls a wave
+		const MapObject *generator = StrMapObject("generator");
+		if (ConfigGetBool(&gConfig, "Game.Puzzles") && generator != NULL)
+		{
+			Objective g;
+			memset(&g, 0, sizeof g);
+			CSTRDUP(g.Description, "Destroy the generators");
+			g.Type = OBJECTIVE_DESTROY;
+			ObjectiveSetDestroy(&g, generator);
+			g.Count = RAND_INT(3, 4);
+			g.Required = g.Count;
+			g.Flags = OBJECTIVE_POSKNOWN;
+			CArrayPushBack(&m.Objectives, &g);
+		}
 	}
 
 	c = GenerateQuickPlayParam(

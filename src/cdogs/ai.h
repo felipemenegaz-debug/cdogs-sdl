@@ -58,5 +58,7 @@ int AICommand(const int ticks);
 void AICommandLast(const int ticks);
 void AIWakeOnSoundAt(const struct vec2 pos);
 void AIAddRandomEnemies(const int enemies, const Mission *m);
+// A wave of n more enemies (with Game.Waves, the only way new ones come)
+void AIAddReinforcements(const int n);
 
 void AIWake(TActor *a, const int delayModifier);

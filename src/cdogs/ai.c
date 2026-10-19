@@ -61,6 +61,7 @@
 #include "game_events.h"
 #include "gamedata.h"
 #include "handle_game_events.h"
+#include "log.h"
 #include "mission.h"
 #include "net_util.h"
 #include "sys_specifics.h"
@@ -71,6 +72,10 @@
 
 static int gBaddieCount = 0;
 static bool sAreGoodGuysPresent = false;
+// Enemies still to come in the current waves (Game.Waves)
+static int sReinforcements = 0;
+// Where the shooting turn starts this time (Game.MaxShooters)
+static int sShooterTurn = 0;
 
 static bool IsFacingPlayer(TActor *actor, direction_e d)
 {
@@ -334,24 +339,50 @@ int AICommand(const int ticks)
 		break;
 	}
 
-	CA_FOREACH(TActor, actor, gActors)
-	if (!IsAIEnabled(actor))
+	// Only so many enemies may shoot at once, like attack tokens; the turn
+	// starts at a different enemy each time so they take turns
+	int maxShooters = ConfigGetInt(&gConfig, "Game.MaxShooters");
+	if (maxShooters > 0)
 	{
-		continue;
+		maxShooters +=
+			MAX(0, GetNumPlayers(PLAYER_ALIVE_OR_DYING, false, false) - 1);
 	}
-	int cmd = 0;
-	if (!(actor->flags & FLAGS_PRISONER))
+	int shooters = 0;
+	const int n = (int)gActors.size;
+	sShooterTurn = n > 0 ? (sShooterTurn + 1) % n : 0;
+	for (int k = 0; k < n; k++)
 	{
-		if (actor->flags & (FLAGS_VICTIM | FLAGS_GOOD_GUY))
+		TActor *actor = CArrayGet(&gActors, (k + sShooterTurn) % n);
+		if (!IsAIEnabled(actor))
 		{
-			sAreGoodGuysPresent = true;
+			continue;
 		}
-		cmd = GetCmd(actor, delayModifier, rollLimit);
-		actor->aiContext->Delay = MAX(0, actor->aiContext->Delay - ticks);
+		int cmd = 0;
+		if (!(actor->flags & FLAGS_PRISONER))
+		{
+			if (actor->flags & (FLAGS_VICTIM | FLAGS_GOOD_GUY))
+			{
+				sAreGoodGuysPresent = true;
+			}
+			cmd = GetCmd(actor, delayModifier, rollLimit);
+			actor->aiContext->Delay = MAX(0, actor->aiContext->Delay - ticks);
+			const bool enemy =
+				!(actor->flags & (FLAGS_VICTIM | FLAGS_GOOD_GUY));
+			if (maxShooters > 0 && enemy && (cmd & CMD_BUTTON1))
+			{
+				if (shooters < maxShooters)
+				{
+					shooters++;
+				}
+				else
+				{
+					cmd &= ~CMD_BUTTON1;
+				}
+			}
+		}
+		actor->aiContext->LastCmd = CommandActor(actor, cmd, ticks);
+		count++;
 	}
-	actor->aiContext->LastCmd = CommandActor(actor, cmd, ticks);
-	count++;
-	CA_FOREACH_END()
 	return count;
 }
 static int GetCmd(TActor *actor, const int delayModifier, const int rollLimit)
@@ -595,8 +626,33 @@ void AIWakeOnSoundAt(const struct vec2 pos)
 	CA_FOREACH_END()
 }
 
+void AIAddReinforcements(const int n)
+{
+	sReinforcements += n;
+	LOG(LM_ACTOR, LL_INFO, "wave of %d enemies (%d to come)", n, sReinforcements);
+}
 void AIAddRandomEnemies(const int enemies, const Mission *m)
 {
+	if (ConfigGetBool(&gConfig, "Game.Waves"))
+	{
+		// No topping up: only the waves called by the map
+		if (sReinforcements > 0 && m->Enemies.size > 0 &&
+			gCampaign.Setting.characters.baddieIds.size > 0)
+		{
+			const int charId =
+				CharacterStoreGetRandomBaddieId(&gCampaign.Setting.characters);
+			const Character *c =
+				CArrayGet(&gCampaign.Setting.characters.OtherChars, charId);
+			GameEvent e = GameEventNewActorAdd(
+				PlaceAwayFromPlayers(&gMap, true, PLACEMENT_ACCESS_ANY), c,
+				NULL);
+			e.u.ActorAdd.CharId = charId;
+			GameEventsEnqueue(&gGameEvents, e);
+			gBaddieCount++;
+			sReinforcements--;
+		}
+		return;
+	}
 	if (m->Enemies.size > 0 && m->EnemyDensity > 0 &&
 		enemies < MAX(1, (m->EnemyDensity *
 						  ConfigGetInt(&gConfig, "Game.EnemyDensity")) /
@@ -662,6 +718,7 @@ void InitializeBadGuys(void)
 
 	gBaddieCount = gMission.index * 4;
 	sAreGoodGuysPresent = false;
+	sReinforcements = 0;
 }
 
 void CreateEnemies(void)

@@ -385,6 +385,7 @@ static bool TryLoadMapObject(MapObject *m, json_t *node, const int version)
 	LoadVec2i(&m->Size, node, "Size");
 	LoadVec2(&m->PosOffset, node, "PosOffset");
 	LoadInt(&m->Health, node, "Health");
+	LoadInt(&m->Reinforcements, node, "Reinforcements");
 	LoadBulletGuns(&m->DestroyGuns, node, "DestroyGuns");
 
 	// Flags
