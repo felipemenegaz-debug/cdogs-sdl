@@ -879,7 +879,7 @@ static void DrawPlayerSummaryRows(
 		char s[64];
 		DrawHead(
 			gGraphicsDevice.gameWindow.renderer, &d->Pd->Char, DIRECTION_DOWN,
-			svec2i(xHead, y - FontH()));
+			svec2i(xHead, y + rowH - FontH()));
 		FontStrMask(
 			d->Pd->name, svec2i(xName, y),
 			d->Pd->survived ? colorWhite : colorRed);
