@@ -306,10 +306,20 @@ void PuzzlesUpdate(const int ticks)
 	// Seal
 	if (!sSeal.Active && !sSeal.Done)
 	{
-		const TObject *seal = FindObject("arena_seal");
-		if (seal != NULL && APlayerIsNear(seal->thing.Pos, SEAL_TRIGGER_TILES))
+		// Missions without random enemies (only hand-placed ones) have
+		// nothing to send: the seal stays a decoration there
+		if (gCampaign.Setting.characters.baddieIds.size == 0)
 		{
-			SealLock(seal);
+			sSeal.Done = true;
+		}
+		else
+		{
+			const TObject *seal = FindObject("arena_seal");
+			if (seal != NULL &&
+				APlayerIsNear(seal->thing.Pos, SEAL_TRIGGER_TILES))
+			{
+				SealLock(seal);
+			}
 		}
 	}
 	else if (sSeal.Active)
