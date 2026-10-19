@@ -186,8 +186,11 @@ void SetupDoorTileClasses(Map *m, PicManager *pm, const TileClass *base)
 }
 static bool MapBuilderIsDoor(const MapBuilder *mb, const struct vec2i v);
 static int MapGetAccessFlags(const MapBuilder *mb, const struct vec2i v);
+// Puzzle barricades per map: a few, so they stay a surprise
+#define MAX_BARRICADES 3
 static void MapSetupDoors(MapBuilder *mb)
 {
+	int barricades = 0;
 	// Mark doors as set up as we go
 	CArray doorsSetup;
 	CArrayInitFillZero(
@@ -203,9 +206,13 @@ static void MapSetupDoors(MapBuilder *mb)
 		// an explosive barrel outside
 		struct vec2i groupSize = svec2i_zero();
 		if (keyFlags == 0 && ConfigGetBool(&gConfig, "Game.Puzzles") &&
-			rand() % 4 == 0)
+			barricades < MAX_BARRICADES && rand() % 3 == 0)
 		{
 			groupSize = MapTryBarricadeDoor(mb, _v);
+			if (!svec2i_is_zero(groupSize))
+			{
+				barricades++;
+			}
 		}
 		if (svec2i_is_zero(groupSize))
 		{
