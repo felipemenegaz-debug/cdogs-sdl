@@ -207,10 +207,21 @@ void CameraUpdate(Camera *camera, const int ticks, const int ms)
 				const PlayerData *firstPlayer =
 					camera->HUD.DrawData.Players[0];
 				const TActor *p = ActorGetByUID(firstPlayer->ActorUID);
-				earPos = p->thing.Pos;
-				camera->lastPosition = svec2_add(
-					p->thing.Pos, UpdateLook(camera, 0, p, res, ms));
-				camera->FocusActorUID = p->uid;
+				if (p != NULL)
+				{
+					earPos = p->thing.Pos;
+					camera->lastPosition = svec2_add(
+						p->thing.Pos, UpdateLook(camera, 0, p, res, ms));
+					camera->FocusActorUID = p->uid;
+				}
+				else
+				{
+					// The player's actor is gone (e.g. just killed) while
+					// the HUD still counts its screen: stay where we are
+					// until spectating takes over
+					ResetLooks(camera);
+					earPos = camera->lastPosition;
+				}
 			}
 			else
 			{
