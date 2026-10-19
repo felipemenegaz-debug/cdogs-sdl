@@ -315,7 +315,18 @@ const NamedSprites *CharacterClassGetDeathSprites(
 {
 	char buf[256];
 	sprintf(buf, "chars/%s", c->DeathSprites);
-	return PicManagerGetSprites(pm, buf);
+	const NamedSprites *ns = PicManagerGetSprites(pm, buf);
+	// Painted classes die with the painted animation when it has the frames
+	if (CharacterClassIsPainted(c) && ns != NULL)
+	{
+		sprintf(buf, "pintado/chars/%s", c->DeathSprites);
+		const NamedSprites *painted = PicManagerGetSprites(pm, buf);
+		if (painted != NULL && painted->pics.size == ns->pics.size)
+		{
+			return painted;
+		}
+	}
+	return ns;
 }
 const CharacterClass *IndexCharacterClass(const int i)
 {
