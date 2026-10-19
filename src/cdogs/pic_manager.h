@@ -60,6 +60,11 @@ void PicManagerReloadTextures(PicManager *pm);
 // Note: return ptr to NamedPic so we can store that instead of the name
 NamedPic *PicManagerGetNamedPic(const PicManager *pm, const char *name);
 Pic *PicManagerGetPic(const PicManager *pm, const char *name);
+// The name a loaded picture or sprite sheet is stored under (NULL if none);
+// slow, for use while loading
+const char *PicManagerFindPicName(const PicManager *pm, const Pic *pic);
+const char *PicManagerFindSpritesName(
+	const PicManager *pm, const CArray *sprites);
 const NamedSprites *PicManagerGetSprites(
 	const PicManager *pm, const char *name);
 

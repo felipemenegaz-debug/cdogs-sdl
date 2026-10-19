@@ -320,44 +320,10 @@ static bool TryLoadMapObject(MapObject *m, json_t *node, const int version)
 				m->Name);
 			goto bail;
 		}
-		// Painted version of a plain picture, if there is one
-		if (version >= 2 && m->Pic.Type == PICTYPE_NORMAL)
+		// Painted version of the picture or sheet, if there is one
+		if (version >= 2)
 		{
-			char *picName = NULL;
-			LoadStr(&picName, normalNode->child, "Pic");
-			if (picName != NULL)
-			{
-				char buf[CDOGS_PATH_MAX];
-				sprintf(buf, "pintado/%s", picName);
-				const Pic *painted = PicManagerGetPic(&gPicManager, buf);
-				if (painted != NULL)
-				{
-					m->PaintedPic = m->Pic;
-					m->PaintedPic.u.Pic = painted;
-				}
-				CFREE(picName);
-			}
-		}
-		// Painted version of an animated sheet, same frame count
-		if (version >= 2 && (m->Pic.Type == PICTYPE_ANIMATED ||
-							 m->Pic.Type == PICTYPE_ANIMATED_RANDOM))
-		{
-			char *spritesName = NULL;
-			LoadStr(&spritesName, normalNode->child, "Sprites");
-			if (spritesName != NULL)
-			{
-				char buf[CDOGS_PATH_MAX];
-				sprintf(buf, "pintado/%s", spritesName);
-				const NamedSprites *painted =
-					PicManagerGetSprites(&gPicManager, buf);
-				if (painted != NULL &&
-					painted->pics.size == m->Pic.u.Animated.Sprites->size)
-				{
-					m->PaintedPic = m->Pic;
-					m->PaintedPic.u.Animated.Sprites = &painted->pics;
-				}
-				CFREE(spritesName);
-			}
+			CPicGetPainted(&m->PaintedPic, &m->Pic);
 		}
 	}
 	if (CPicIsLoaded(&m->Pic))
@@ -588,6 +554,7 @@ static void SetupSpawner(
 		&PicManagerGetSprites(&gPicManager, "spawn_pad")->pics;
 	m->Pic.u.Animated.TicksPerFrame = 8;
 	m->Pic.Mask = colorWhite;
+	CPicGetPainted(&m->PaintedPic, &m->Pic);
 	const struct vec2i size = CPicGetSize(&m->Pic);
 	m->Offset = svec2i(-size.x / 2, TILE_HEIGHT / 2 - size.y);
 	m->Size = TILE_SIZE;

@@ -84,6 +84,9 @@ typedef struct
 	char *Name;
 	CArray Effects; // of PickupEffect
 	CPic Pic;
+	// Painted picture (graphics/pintado/<pic>), used with
+	// Graphics.PaintedScenery
+	CPic PaintedPic;
 	char *Sound;
 } PickupClass;
 typedef struct
@@ -110,6 +113,9 @@ int StrPickupClassId(const char *s);
 void PickupMenuItemInit(PickupMenuItem *m);
 PickupEffect PickupEffectCopy(const PickupEffect *e);
 void PickupClassInit(PickupClass *c);
+// The picture new pickups are drawn with: the painted one if there is one
+// and Graphics.PaintedScenery is on
+const CPic *PickupClassDrawCPic(const PickupClass *c);
 
 void PickupEffectTerminate(PickupEffect *e);
 

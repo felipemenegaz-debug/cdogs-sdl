@@ -89,7 +89,7 @@ void PickupAdd(const NAddPickup ap)
 	p->UID = ap.UID;
 	p->class = StrPickupClass(ap.PickupClass);
 	ThingInit(&p->thing, i, KIND_PICKUP, PICKUP_SIZE, ap.ThingFlags);
-	p->thing.CPic = p->class->Pic;
+	p->thing.CPic = *PickupClassDrawCPic(p->class);
 	p->thing.CPicFunc = PickupDraw;
 	MapTryMoveThing(&gMap, &p->thing, NetToVec2(ap.Pos));
 	p->IsRandomSpawned = ap.IsRandomSpawned;

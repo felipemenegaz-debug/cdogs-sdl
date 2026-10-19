@@ -568,6 +568,47 @@ Pic *PicManagerGetPic(const PicManager *pm, const char *name)
 		return &n->pic;
 	return NULL;
 }
+typedef struct
+{
+	const void *target;
+	const char *name;
+} FindNameData;
+static int FindPicNameFunc(any_t data, any_t item)
+{
+	FindNameData *d = data;
+	const NamedPic *n = item;
+	if (d->name == NULL && &n->pic == d->target)
+	{
+		d->name = n->name;
+	}
+	return MAP_OK;
+}
+static int FindSpritesNameFunc(any_t data, any_t item)
+{
+	FindNameData *d = data;
+	const NamedSprites *n = item;
+	if (d->name == NULL && &n->pics == d->target)
+	{
+		d->name = n->name;
+	}
+	return MAP_OK;
+}
+const char *PicManagerFindPicName(const PicManager *pm, const Pic *pic)
+{
+	FindNameData d = {pic, NULL};
+	hashmap_iterate(pm->customPics, FindPicNameFunc, &d);
+	hashmap_iterate(pm->pics, FindPicNameFunc, &d);
+	return d.name;
+}
+const char *PicManagerFindSpritesName(
+	const PicManager *pm, const CArray *sprites)
+{
+	FindNameData d = {sprites, NULL};
+	hashmap_iterate(pm->customSprites, FindSpritesNameFunc, &d);
+	hashmap_iterate(pm->sprites, FindSpritesNameFunc, &d);
+	return d.name;
+}
+
 const NamedSprites *PicManagerGetSprites(
 	const PicManager *pm, const char *name)
 {

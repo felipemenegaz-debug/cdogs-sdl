@@ -92,6 +92,9 @@ void CPicInitNormal(CPic *p, const Pic *pic);
 void CPicInitNormalFromName(CPic *p, const char *name);
 void CPicLoadNormal(CPic *p, const json_t *node);
 bool CPicIsLoaded(const CPic *p);
+// The painted version of a picture (graphics/pintado/<name>): same type,
+// and for sheets the same frame count; false if there is none
+bool CPicGetPainted(CPic *out, const CPic *src);
 struct vec2i CPicGetSize(const CPic *p);
 // Copy everything except frame
 void CPicCopyPic(CPic *dest, const CPic *src);

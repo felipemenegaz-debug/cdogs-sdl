@@ -204,6 +204,58 @@ bool CPicIsLoaded(const CPic *p)
 	}
 }
 
+bool CPicGetPainted(CPic *out, const CPic *src)
+{
+	char buf[CDOGS_PATH_MAX];
+	switch (src->Type)
+	{
+	case PICTYPE_NORMAL: {
+		if (src->u.Pic == NULL)
+		{
+			return false;
+		}
+		const char *name = PicManagerFindPicName(&gPicManager, src->u.Pic);
+		if (name == NULL)
+		{
+			return false;
+		}
+		sprintf(buf, "pintado/%s", name);
+		const Pic *p = PicManagerGetPic(&gPicManager, buf);
+		if (p == NULL)
+		{
+			return false;
+		}
+		*out = *src;
+		out->u.Pic = p;
+		return true;
+	}
+	case PICTYPE_ANIMATED:
+	case PICTYPE_ANIMATED_RANDOM: {
+		if (src->u.Animated.Sprites == NULL)
+		{
+			return false;
+		}
+		const char *name =
+			PicManagerFindSpritesName(&gPicManager, src->u.Animated.Sprites);
+		if (name == NULL)
+		{
+			return false;
+		}
+		sprintf(buf, "pintado/%s", name);
+		const NamedSprites *ns = PicManagerGetSprites(&gPicManager, buf);
+		if (ns == NULL || ns->pics.size != src->u.Animated.Sprites->size)
+		{
+			return false;
+		}
+		*out = *src;
+		out->u.Animated.Sprites = &ns->pics;
+		return true;
+	}
+	default:
+		return false;
+	}
+}
+
 struct vec2i CPicGetSize(const CPic *p)
 {
 	const Pic *pic = CPicGetPic(p, 0);

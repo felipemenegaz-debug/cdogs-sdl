@@ -29,6 +29,7 @@
 
 #include "ammo.h"
 #include "game_events.h"
+#include "config.h"
 #include "json_utils.h"
 #include "log.h"
 #include "mission.h"
@@ -176,6 +177,15 @@ void PickupClassInit(PickupClass *c)
 {
 	memset(c, 0, sizeof *c);
 	CArrayInit(&c->Effects, sizeof(PickupEffect));
+}
+const CPic *PickupClassDrawCPic(const PickupClass *c)
+{
+	if (CPicIsLoaded(&c->PaintedPic) &&
+		ConfigGetBool(&gConfig, "Graphics.PaintedScenery"))
+	{
+		return &c->PaintedPic;
+	}
+	return &c->Pic;
 }
 void PickupMenuItemInit(PickupMenuItem *m)
 {
@@ -355,6 +365,7 @@ static void LoadPickupclass(PickupClass *c, json_t *node, const int version)
 	{
 		CPicLoadJSON(&c->Pic, picNode);
 	}
+	CPicGetPainted(&c->PaintedPic, &c->Pic);
 }
 static PickupEffect LoadPickupEffect(json_t *node, const int version)
 {
@@ -441,6 +452,7 @@ void PickupClassesLoadAmmo(CArray *classes, const CArray *ammoClasses)
 	sprintf(buf, "ammo_%s", a->Name);
 	CSTRDUP(c.Name, buf);
 	CPicCopyPic(&c.Pic, &a->Pic);
+	CPicGetPainted(&c.PaintedPic, &c.Pic);
 	PickupEffect p;
 	memset(&p, 0, sizeof p);
 	p.Type = PICKUP_AMMO;
@@ -487,6 +499,7 @@ void PickupClassesLoadKeys(CArray *classes)
 		PickupClassInit(&c);
 		CSTRDUP(c.Name, buf);
 		CPicInitNormalFromName(&c.Pic, c.Name);
+		CPicGetPainted(&c.PaintedPic, &c.Pic);
 		PickupEffect p;
 		p.Type = PICKUP_KEYCARD;
 		p.u.Keys = StrKeycard(keyColors[i]);
