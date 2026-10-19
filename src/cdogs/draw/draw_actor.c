@@ -769,6 +769,19 @@ static const Pic *GetGunPic(
 	const int gunState, const CharColors *colors)
 {
 	const int idx = (gunState == GUNSTATE_READY ? 8 : 0) + dir;
+	// Painted version of the gun (chars/guns/pintado_<gun>), if there is one
+	char painted[CDOGS_PATH_MAX];
+	const char *slash = strrchr(gunSprites, '/');
+	if (slash != NULL && ConfigGetBool(&gConfig, "Graphics.PaintedCharacters"))
+	{
+		sprintf(
+			painted, "%.*spintado_%s", (int)(slash + 1 - gunSprites), gunSprites,
+			slash + 1);
+		if (PicManagerGetSprites(pm, painted) != NULL)
+		{
+			gunSprites = painted;
+		}
+	}
 	// Get or generate masked sprites
 	const NamedSprites *ns = PicManagerGetCharSprites(pm, gunSprites, colors);
 	if (ns == NULL)
