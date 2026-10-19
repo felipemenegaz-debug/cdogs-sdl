@@ -749,6 +749,8 @@ static int GetFriendlyBonus(const PlayerData *p)
 static void DrawPlayerSummary(
 	const struct vec2i pos, const struct vec2i size,
 	const PlayerSummaryDrawData *data);
+static void DrawPlayerSummaryRows(
+	const PlayerSummaryDrawData *datas, const int n, const int w, const int h);
 static void MissionSummaryMenuDraw(
 	const menu_t *menu, GraphicsDevice *g, const struct vec2i p,
 	const struct vec2i size, const void *data)
@@ -846,20 +848,52 @@ static void MissionSummaryMenuDraw(
 		break;
 	case 3: // fallthrough
 	case 4:
-		// 2x2
-		playerSize = svec2i(w / 2, h / 4);
-		DrawPlayerSummary(svec2i_zero(), playerSize, &mData->pDatas[0]);
-		DrawPlayerSummary(svec2i(w / 2, 0), playerSize, &mData->pDatas[1]);
-		DrawPlayerSummary(svec2i(0, h / 4), playerSize, &mData->pDatas[2]);
-		if (idx == 4)
-		{
-			DrawPlayerSummary(
-				svec2i(w / 2, h / 4), playerSize, &mData->pDatas[3]);
-		}
+		// One row per player: the 2x2 boxes overflowed into each other
+		DrawPlayerSummaryRows(
+			mData->pDatas, GetNumPlayers(PLAYER_ANY, false, true), w, h);
 		break;
 	default:
 		CASSERT(false, "not implemented");
 		break;
+	}
+}
+// 3-4 players: a table with a row per player (head, name, score, total,
+// mission time and the player's bonuses), above the objectives
+static void DrawPlayerSummaryRows(
+	const PlayerSummaryDrawData *datas, const int n, const int w, const int h)
+{
+	const int xHead = w * 10 / 100;
+	const int xName = w * 15 / 100;
+	const int xCols[] = {w * 44 / 100, w * 58 / 100, w * 72 / 100, w * 84 / 100};
+	const char *headers[] = {"Score", "Total", "Time", "Bonus"};
+	const int rowH = FontH() + 6;
+	int y = h / 12;
+	for (int i = 0; i < 4; i++)
+	{
+		FontStrMask(headers[i], svec2i(xCols[i], y), colorGray);
+	}
+	y += rowH;
+	for (int i = 0; i < n; i++)
+	{
+		const PlayerSummaryDrawData *d = &datas[i];
+		char s[64];
+		DrawHead(
+			gGraphicsDevice.gameWindow.renderer, &d->Pd->Char, DIRECTION_DOWN,
+			svec2i(xHead, y - FontH()));
+		FontStrMask(
+			d->Pd->name, svec2i(xName, y),
+			d->Pd->survived ? colorWhite : colorRed);
+		sprintf(s, "%d", d->Score.current);
+		FontStr(s, svec2i(xCols[0], y));
+		sprintf(s, "%d", d->Total.current);
+		FontStr(s, svec2i(xCols[1], y));
+		sprintf(s, "%d:%02d", d->Time.current / 60, d->Time.current % 60);
+		FontStr(s, svec2i(xCols[2], y));
+		const int bonus = (d->HealthResurrection.prefix ? d->HealthResurrection.current : 0) +
+			(d->ButcherNinjaFriendly.prefix ? d->ButcherNinjaFriendly.current : 0);
+		sprintf(s, "%d", bonus);
+		FontStr(s, svec2i(xCols[3], y));
+		y += rowH;
 	}
 }
 // Display compact player summary, with player on left half and score summaries
