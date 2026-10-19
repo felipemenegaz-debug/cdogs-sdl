@@ -316,8 +316,9 @@ const NamedSprites *CharacterClassGetDeathSprites(
 	char buf[256];
 	sprintf(buf, "chars/%s", c->DeathSprites);
 	const NamedSprites *ns = PicManagerGetSprites(pm, buf);
-	// Painted classes die with the painted animation when it has the frames
-	if (CharacterClassIsPainted(c) && ns != NULL)
+	// With painted characters every class dies with the painted animation
+	// (the original is a generic figure too), when it has the same frames
+	if (ConfigGetBool(&gConfig, "Graphics.PaintedCharacters") && ns != NULL)
 	{
 		sprintf(buf, "pintado/chars/%s", c->DeathSprites);
 		const NamedSprites *painted = PicManagerGetSprites(pm, buf);
