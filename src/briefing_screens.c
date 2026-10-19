@@ -967,8 +967,9 @@ void DrawObjectiveInfo(const Objective *o, const struct vec2i pos)
 	case OBJECTIVE_COLLECT: {
 		struct vec2i drawPos = pos;
 		CA_FOREACH(const PickupClass *, pc, o->u.Pickups)
+		// The same picture as on the map (painted with PaintedScenery)
 		CPicDraw(
-			&gGraphicsDevice, &(*pc)->Pic,
+			&gGraphicsDevice, PickupClassDrawCPic(*pc),
 			svec2i_subtract(drawPos, svec2i(-4, -4)), NULL);
 		drawPos = svec2i_add(drawPos, svec2i(4, 2));
 		CA_FOREACH_END()
@@ -978,7 +979,8 @@ void DrawObjectiveInfo(const Objective *o, const struct vec2i pos)
 		struct vec2i drawPos = pos;
 		CA_FOREACH(const MapObject *, mo, o->u.MapObjects)
 		struct vec2i picOffset;
-		const Pic *p = MapObjectGetPic(*mo, &picOffset);
+		MapObjectGetPic(*mo, &picOffset);
+		const Pic *p = CPicGetPic(MapObjectDrawCPic(*mo), 0);
 		PicRender(
 			p, gGraphicsDevice.gameWindow.renderer,
 			svec2i_add(drawPos, picOffset), colorWhite, 0, svec2_one(),
