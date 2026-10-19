@@ -55,6 +55,7 @@
 #include "collision/collision.h"
 #include "draw/drawtools.h"
 #include "game_events.h"
+#include "config.h"
 #include "json_utils.h"
 #include "log.h"
 #include "net_util.h"
@@ -953,6 +954,9 @@ static void LoadBullet(
 		"...outOfRangeGuns(%d) hitGuns(%d) proximityGuns(%d)",
 		(int)b->OutOfRangeGuns.size, (int)b->HitGuns.size,
 		(int)b->ProximityGuns.size);
+
+	memset(&b->PaintedCPic, 0, sizeof b->PaintedCPic);
+	CPicGetPainted(&b->PaintedCPic, &b->CPic);
 }
 static void LoadHitsound(
 	char **hitsound, json_t *node, const char *name, const int version)
@@ -1111,6 +1115,11 @@ void BulletAdd(const NAddBullet add)
 	obj->thing.drawFunc = NULL;
 	obj->thing.drawData.MobObjId = i;
 	obj->thing.CPic = obj->bulletClass->CPic;
+	if (CPicIsLoaded(&obj->bulletClass->PaintedCPic) &&
+		ConfigGetBool(&gConfig, "Graphics.PaintedCharacters"))
+	{
+		obj->thing.CPic = obj->bulletClass->PaintedCPic;
+	}
 	obj->thing.CPicFunc = BulletDraw;
 	obj->thing.ShadowSize = obj->bulletClass->ShadowSize;
 	MapTryMoveThing(&gMap, &obj->thing, pos);

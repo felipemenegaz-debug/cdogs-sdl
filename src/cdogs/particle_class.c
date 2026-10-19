@@ -27,6 +27,7 @@
 */
 #include "particle_class.h"
 
+#include "config.h"
 #include "json_utils.h"
 #include "log.h"
 #include "pic_manager.h"
@@ -235,6 +236,19 @@ static void LoadParticleClass(
 	LoadBool(&c->ZDarken, node, "ZDarken");
 	LoadBool(&c->DrawBelow, node, "DrawBelow");
 	LoadBool(&c->DrawAbove, node, "DrawAbove");
+	if (c->Type == PARTICLE_PIC)
+	{
+		CPicGetPainted(&c->PaintedPic, &c->u.Pic);
+	}
+}
+const CPic *ParticleClassDrawCPic(const ParticleClass *c)
+{
+	if (CPicIsLoaded(&c->PaintedPic) &&
+		ConfigGetBool(&gConfig, "Graphics.PaintedCharacters"))
+	{
+		return &c->PaintedPic;
+	}
+	return &c->u.Pic;
 }
 
 const ParticleClass *StrParticleClass(

@@ -264,7 +264,7 @@ int ParticleAdd(CArray *particles, const AddParticle add)
 	switch (p->Class->Type)
 	{
 	case PARTICLE_PIC:
-		CPicCopyPic(&p->u.Pic, &p->Class->u.Pic);
+		CPicCopyPic(&p->u.Pic, ParticleClassDrawCPic(p->Class));
 		break;
 	case PARTICLE_TEXT:
 		CSTRDUP(p->u.Text, add.Text);

@@ -229,6 +229,27 @@ bool CPicGetPainted(CPic *out, const CPic *src)
 		out->u.Pic = p;
 		return true;
 	}
+	case PICTYPE_DIRECTIONAL: {
+		if (src->u.Sprites == NULL)
+		{
+			return false;
+		}
+		const char *name =
+			PicManagerFindSpritesName(&gPicManager, src->u.Sprites);
+		if (name == NULL)
+		{
+			return false;
+		}
+		sprintf(buf, "pintado/%s", name);
+		const NamedSprites *ns = PicManagerGetSprites(&gPicManager, buf);
+		if (ns == NULL || ns->pics.size != src->u.Sprites->size)
+		{
+			return false;
+		}
+		*out = *src;
+		out->u.Sprites = &ns->pics;
+		return true;
+	}
 	case PICTYPE_ANIMATED:
 	case PICTYPE_ANIMATED_RANDOM: {
 		if (src->u.Animated.Sprites == NULL)

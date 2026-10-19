@@ -67,6 +67,9 @@ typedef struct
 {
 	char *Name;
 	CPic CPic;
+	// Painted picture (graphics/pintado/<pic>), used with
+	// Graphics.PaintedCharacters
+	CPic PaintedCPic;
 	struct
 	{
 		const ParticleClass *P;

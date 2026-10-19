@@ -53,6 +53,9 @@ typedef struct
 		} Text;
 		char *CharSprite;
 	} u;
+	// Painted picture (graphics/pintado/<pic>) of a PARTICLE_PIC, used with
+	// Graphics.PaintedCharacters
+	CPic PaintedPic;
 	// -1 is infinite range
 	int RangeLow;
 	int RangeHigh;
@@ -78,3 +81,5 @@ void ParticleClassesTerminate(ParticleClasses *classes);
 void ParticleClassesClear(CArray *classes);
 const ParticleClass *StrParticleClass(
 	const ParticleClasses *classes, const char *name);
+// The picture new particles of this class are drawn with
+const CPic *ParticleClassDrawCPic(const ParticleClass *c);
