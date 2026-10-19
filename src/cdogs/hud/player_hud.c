@@ -39,6 +39,7 @@
 #define AMMO_WIDTH 27
 #define GUN_ICON_WIDTH 14
 #define PLAYER_ICON_WIDTH 20
+#define PAINTED_ICON_DROP 7
 #define BAR_HEIGHT 13
 #define GUN_CHANGE_FLASH_MS 500
 #define FLASH_PERIOD_MS 100
@@ -249,7 +250,13 @@ static void DrawPlayerIcon(
 	{
 		ActorPics pics = GetCharacterPicsFromActor(a);
 		pics.ShadowMask = colorTransparent;
-		const struct vec2i offset = svec2i(-2, 10);
+		struct vec2i offset = svec2i(-2, 10);
+		// Painted figures sit higher in their bigger frames: bring the head
+		// down from under the top of the portrait frame
+		if (CharacterClassIsPainted(ActorGetCharacter(a)->Class))
+		{
+			offset.y += PAINTED_ICON_DROP;
+		}
 		struct vec2i pos = svec2i(framePic->size.x / 2, framePic->size.y / 2);
 		if (flags & HUDFLAGS_PLACE_RIGHT)
 		{
