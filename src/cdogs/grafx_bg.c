@@ -119,6 +119,10 @@ static bool DrawPainted(
 	BlitClearBuf(g);
 	BlitUpdateFromBuf(g, g->bkg);
 	WindowContext *wc = &g->gameWindow;
+	// Screens draw this in the middle of a frame: put the target back after
+	SDL_Texture *prevTarget = SDL_GetRenderTarget(wc->renderer);
+	int logicalW, logicalH;
+	SDL_RenderGetLogicalSize(wc->renderer, &logicalW, &logicalH);
 	if (SDL_SetRenderTarget(wc->renderer, g->bkgTgt) != 0)
 	{
 		LOG(LM_GFX, LL_ERROR, "cannot set render target: %s", SDL_GetError());
@@ -145,9 +149,14 @@ static bool DrawPainted(
 			Rect2iNew(margin, svec2i_subtract(res, svec2i_scale(margin, 2))),
 			12, 12, 12, 12, false, colorWhite, SDL_FLIP_NONE);
 	}
-	if (SDL_SetRenderTarget(wc->renderer, NULL) != 0)
+	if (SDL_SetRenderTarget(wc->renderer, prevTarget) != 0)
 	{
 		LOG(LM_GFX, LL_ERROR, "cannot set render target: %s", SDL_GetError());
+	}
+	// Changing the target drops the logical size the frame is drawn with
+	if (logicalW > 0 && logicalH > 0)
+	{
+		SDL_RenderSetLogicalSize(wc->renderer, logicalW, logicalH);
 	}
 	wc->bkgMask = colorWhite;
 	return true;
