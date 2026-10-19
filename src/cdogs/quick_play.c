@@ -356,6 +356,25 @@ static void AddMission(
 		break;
 	}
 
+	// Puzzles need doors: barricades and switches replace some of them
+	if (ConfigGetBool(&gConfig, "Game.Puzzles"))
+	{
+		switch (m.Type)
+		{
+		case MAPTYPE_CLASSIC:
+			m.u.Classic.Doors.Enabled = true;
+			break;
+		case MAPTYPE_CAVE:
+			m.u.Cave.DoorsEnabled = true;
+			break;
+		case MAPTYPE_INTERIOR:
+			m.u.Interior.Doors.Enabled = true;
+			break;
+		default:
+			break;
+		}
+	}
+
 	for (int i = 0; i < MIN(missionNumEnemies[idx], (int)cs->OtherChars.size);
 		 i++)
 	{

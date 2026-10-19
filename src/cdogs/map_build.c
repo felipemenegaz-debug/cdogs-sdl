@@ -198,8 +198,19 @@ static void MapSetupDoors(MapBuilder *mb)
 	const int idx = _v.x + _v.y * mb->Map->Size.x;
 	if (MapBuilderIsDoor(mb, _v) && !*(bool *)CArrayGet(&doorsSetup, idx))
 	{
-		const struct vec2i groupSize =
-			MapAddDoorGroup(mb, _v, MapGetAccessFlags(mb, _v));
+		const int keyFlags = MapGetAccessFlags(mb, _v);
+		// Puzzle: some ordinary doors are a cracked barricade instead, with
+		// an explosive barrel outside
+		struct vec2i groupSize = svec2i_zero();
+		if (keyFlags == 0 && ConfigGetBool(&gConfig, "Game.Puzzles") &&
+			rand() % 4 == 0)
+		{
+			groupSize = MapTryBarricadeDoor(mb, _v);
+		}
+		if (svec2i_is_zero(groupSize))
+		{
+			groupSize = MapAddDoorGroup(mb, _v, keyFlags);
+		}
 		for (int dx = 0; dx < groupSize.x; dx++)
 		{
 			for (int dy = 0; dy < groupSize.y; dy++)
@@ -559,9 +570,18 @@ static void AddKeys(MapBuilder *mb)
 		MapPlaceCard(mb, 0, 0);
 	}
 }
+static bool MapTryPlaceSwitch(
+	MapBuilder *mb, const int keyIndex, const int mapAccess);
 static void MapPlaceCard(
 	MapBuilder *mb, const int keyIndex, const int mapAccess)
 {
+	// Puzzle: sometimes a switch on a wall of the same colour, shot to open
+	// the doors, stands in for the card
+	if (ConfigGetBool(&gConfig, "Game.Puzzles") && rand() % 2 == 0 &&
+		MapTryPlaceSwitch(mb, keyIndex, mapAccess))
+	{
+		return;
+	}
 	for (;;)
 	{
 		const struct vec2i v = MapGetRandomTile(mb->Map);
@@ -576,6 +596,32 @@ static void MapPlaceCard(
 		}
 	}
 }
+static bool MapTryPlaceSwitch(
+	MapBuilder *mb, const int keyIndex, const int mapAccess)
+{
+	static const char *colours[] = {"yellow", "green", "blue", "red"};
+	char name[64];
+	sprintf(name, "switch_%s", colours[keyIndex]);
+	const MapObject *mo = StrMapObject(name);
+	if (mo == NULL)
+	{
+		return false;
+	}
+	for (int i = 0; i < 2000; i++)
+	{
+		const struct vec2i v = MapGetRandomTile(mb->Map);
+		const Tile *t = MapGetTile(mb->Map, v);
+		if (t->Class->IsRoom && TileIsClear(t) && TileCanWalk(t) &&
+			MapBuildGetAccess(mb, v) == mapAccess &&
+			MapTryPlaceOneObject(mb, v, mo, 0, false))
+		{
+			LOG(LM_MAP, LL_INFO, "%s at (%d, %d)", name, v.x, v.y);
+			return true;
+		}
+	}
+	return false;
+}
+
 typedef struct
 {
 	const Objective *o;

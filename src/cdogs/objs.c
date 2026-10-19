@@ -211,6 +211,15 @@ void ObjRemove(const NMapObjectRemove mor)
 			GameEventsEnqueue(&gGameEvents, e);
 		}
 
+		// Switches open the doors of their colour, like a keycard
+		if (o->Class->Keys != 0)
+		{
+			GameEvent e = GameEventNew(GAME_EVENT_ADD_KEYS);
+			e.u.AddKeys.KeyFlags = o->Class->Keys;
+			e.u.AddKeys.Pos = Vec2ToNet(o->thing.Pos);
+			GameEventsEnqueue(&gGameEvents, e);
+		}
+
 		// Some objects (generators) call a wave of enemies
 		if (o->Class->Reinforcements > 0)
 		{

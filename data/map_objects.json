@@ -2043,6 +2043,97 @@
       "Health": 0,
       "DrawBelow": true,
       "FootstepSound": "footsteps/gravel"
+    },
+    {
+      "Name": "barricade",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "barricade"
+      },
+      "Size": [16, 12],
+      "Wreck": "barricade_wreck",
+      "Health": 150,
+      "DamageSmoke": {
+        "HealthThreshold": 0.5
+      }
+    },
+    {
+      "Name": "barricade_wreck",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "barricade_wreck"
+      },
+      "Health": 0,
+      "DrawBelow": true,
+      "FootstepSound": "footsteps/gravel"
+    },
+    {
+      "Name": "switch_yellow",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "switch_yellow"
+      },
+      "Size": [12, 1],
+      "PosOffset": [0, 2],
+      "Offset": [-6, -13],
+      "Wreck": "switch_used",
+      "Health": 5,
+      "Keys": 1,
+      "Flags": ["OnWall"]
+    },
+    {
+      "Name": "switch_green",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "switch_green"
+      },
+      "Size": [12, 1],
+      "PosOffset": [0, 2],
+      "Offset": [-6, -13],
+      "Wreck": "switch_used",
+      "Health": 5,
+      "Keys": 2,
+      "Flags": ["OnWall"]
+    },
+    {
+      "Name": "switch_blue",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "switch_blue"
+      },
+      "Size": [12, 1],
+      "PosOffset": [0, 2],
+      "Offset": [-6, -13],
+      "Wreck": "switch_used",
+      "Health": 5,
+      "Keys": 4,
+      "Flags": ["OnWall"]
+    },
+    {
+      "Name": "switch_red",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "switch_red"
+      },
+      "Size": [12, 1],
+      "PosOffset": [0, 2],
+      "Offset": [-6, -13],
+      "Wreck": "switch_used",
+      "Health": 5,
+      "Keys": 8,
+      "Flags": ["OnWall"]
+    },
+    {
+      "Name": "switch_used",
+      "Pic": {
+        "Type": "Normal",
+        "Pic": "switch_used"
+      },
+      "Size": [12, 1],
+      "PosOffset": [0, 2],
+      "Offset": [-6, -13],
+      "Health": 0,
+      "Flags": ["OnWall"]
     }
   ]
 }

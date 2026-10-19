@@ -64,6 +64,11 @@ typedef enum
 	DOORTYPE_COUNT
 } DoorType;
 
+// An ordinary door (up to 3 tiles) turned into a passage blocked by
+// barricades (map object "barricade") with an explosive barrel outside.
+// Returns the size of the doorway, or zero if the door doesn't suit it
+// (nothing changed then)
+struct vec2i MapTryBarricadeDoor(MapBuilder *mb, const struct vec2i v);
 struct vec2i MapAddDoorGroup(
 	MapBuilder *mb, const struct vec2i v, const int keyFlags);
 

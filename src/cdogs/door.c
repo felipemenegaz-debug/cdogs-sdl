@@ -114,6 +114,78 @@ static TWatch *CreateCloseDoorWatch(
 static Trigger *CreateOpenDoorTrigger(
 	MapBuilder *mb, const struct vec2i v, const bool isHorizontal,
 	const int doorGroupCount, const int keyFlags);
+struct vec2i MapTryBarricadeDoor(MapBuilder *mb, const struct vec2i v)
+{
+	const MapObject *barricade = StrMapObject("barricade");
+	const MapObject *barrel = StrMapObject("barrel_skull");
+	if (barricade == NULL)
+	{
+		return svec2i_zero();
+	}
+	const bool isHorizontal = DoorGroupIsHorizontal(mb, v);
+	const int count = GetDoorCountInGroup(mb, v, isHorizontal);
+	if (count < 1 || count > 3)
+	{
+		return svec2i_zero();
+	}
+	// The door runs along; the passage goes across it
+	const struct vec2i along = svec2i(isHorizontal ? 1 : 0, isHorizontal ? 0 : 1);
+	const struct vec2i across = svec2i(along.y, along.x);
+	// Every tile of the doorway needs walkable floor on both sides, and the
+	// room side gives the floor that replaces the door
+	const TileClass *floor = NULL;
+	bool roomOnA = false;
+	for (int i = 0; i < count; i++)
+	{
+		const struct vec2i vI = svec2i_add(v, svec2i_scale(along, (float)i));
+		const struct vec2i a = svec2i_subtract(vI, across);
+		const struct vec2i b = svec2i_add(vI, across);
+		if (!MapIsTileIn(mb->Map, a) || !MapIsTileIn(mb->Map, b))
+		{
+			return svec2i_zero();
+		}
+		const Tile *tA = MapGetTile(mb->Map, a);
+		const Tile *tB = MapGetTile(mb->Map, b);
+		if (!TileCanWalk(tA) || !TileCanWalk(tB))
+		{
+			return svec2i_zero();
+		}
+		const Tile *room = tA->Class->IsRoom ? tA : tB;
+		if (room->Class->Type != TILE_CLASS_FLOOR)
+		{
+			return svec2i_zero();
+		}
+		floor = room->Class;
+		roomOnA = tA->Class->IsRoom;
+	}
+	// The doorway becomes floor, blocked by barricades
+	for (int i = 0; i < count; i++)
+	{
+		const struct vec2i vI = svec2i_add(v, svec2i_scale(along, (float)i));
+		MapBuilderSetTile(mb, vI, floor);
+		MapTryPlaceOneObject(mb, vI, barricade, 0, false);
+	}
+	LOG(LM_MAP, LL_INFO, "barricade at (%d, %d) x%d", v.x, v.y, count);
+	// The barrel outside, beside the passage, as the hint
+	if (barrel != NULL)
+	{
+		const struct vec2i out = roomOnA ? svec2i_add(v, across) : svec2i_subtract(v, across);
+		const struct vec2i spots[] = {
+			svec2i_subtract(out, along),
+			svec2i_add(out, svec2i_scale(along, (float)count)), out};
+		for (int i = 0; i < 3; i++)
+		{
+			if (MapIsTileIn(mb->Map, spots[i]) &&
+				TileCanWalk(MapGetTile(mb->Map, spots[i])) &&
+				MapTryPlaceOneObject(mb, spots[i], barrel, 0, false))
+			{
+				break;
+			}
+		}
+	}
+	return isHorizontal ? svec2i(count, 1) : svec2i(1, count);
+}
+
 struct vec2i MapAddDoorGroup(
 	MapBuilder *mb, const struct vec2i v, const int keyFlags)
 {

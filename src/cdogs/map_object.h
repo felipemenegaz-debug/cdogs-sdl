@@ -103,6 +103,8 @@ typedef struct
 	int Health;
 	// Enemies called in a wave when this object is destroyed (Game.Waves)
 	int Reinforcements;
+	// Keycards (FLAGS_KEYCARD_*) given to the team when destroyed: switches
+	int Keys;
 	// Guns that are fired when this map object is destroyed
 	// i.e. explosion on destruction
 	CArray DestroyGuns; // of const WeaponClass *
