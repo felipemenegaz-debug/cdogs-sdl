@@ -56,6 +56,8 @@ void Draw9Slice(
 	};
 	const int dstW[] = {left, target.Size.x - right - left, right};
 	const int dstH[] = {top, target.Size.y - bottom - top, bottom};
+	// Slices are in logical pixels; high-res (HD) pics have Scale texels each
+	const int scale = pic->Scale > 1 ? pic->Scale : 1;
 	Rect2i src;
 	Rect2i dst;
 	for (int i = 0; i < 3; i++)
@@ -84,8 +86,11 @@ void Draw9Slice(
 					{
 						src.Size.y = dst.Size.y = dstY[j + 1] - dst.Pos.y;
 					}
+					const Rect2i srcTex = Rect2iNew(
+						svec2i_scale(src.Pos, scale),
+						svec2i_scale(src.Size, scale));
 					TextureRender(
-						pic->Tex, g->gameWindow.renderer, src, dst, mask, 0,
+						pic->Tex, g->gameWindow.renderer, srcTex, dst, mask, 0,
 						flip);
 				}
 			}
