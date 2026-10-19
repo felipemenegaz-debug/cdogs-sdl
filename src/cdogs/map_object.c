@@ -48,6 +48,7 @@
 */
 #include "map_object.h"
 
+#include "config.h"
 #include "json_utils.h"
 #include "log.h"
 #include "map.h"
@@ -318,6 +319,24 @@ static bool TryLoadMapObject(MapObject *m, json_t *node, const int version)
 			LOG(LM_MAIN, LL_ERROR, "pic not found for map object(%s)",
 				m->Name);
 			goto bail;
+		}
+		// Painted version of a plain picture, if there is one
+		if (version >= 2 && m->Pic.Type == PICTYPE_NORMAL)
+		{
+			char *picName = NULL;
+			LoadStr(&picName, normalNode->child, "Pic");
+			if (picName != NULL)
+			{
+				char buf[CDOGS_PATH_MAX];
+				sprintf(buf, "pintado/%s", picName);
+				const Pic *painted = PicManagerGetPic(&gPicManager, buf);
+				if (painted != NULL)
+				{
+					m->PaintedPic = m->Pic;
+					m->PaintedPic.u.Pic = painted;
+				}
+				CFREE(picName);
+			}
 		}
 	}
 	if (CPicIsLoaded(&m->Pic))
@@ -591,6 +610,16 @@ void MapObjectsTerminate(MapObjects *classes)
 int MapObjectsCount(const MapObjects *classes)
 {
 	return (int)classes->Classes.size + (int)classes->CustomClasses.size;
+}
+
+const CPic *MapObjectDrawCPic(const MapObject *mo)
+{
+	if (CPicIsLoaded(&mo->PaintedPic) &&
+		ConfigGetBool(&gConfig, "Graphics.PaintedScenery"))
+	{
+		return &mo->PaintedPic;
+	}
+	return &mo->Pic;
 }
 
 const Pic *MapObjectGetPic(const MapObject *mo, struct vec2i *offset)

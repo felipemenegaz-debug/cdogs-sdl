@@ -506,7 +506,7 @@ void ObjAdd(const NMapObjectAdd amo)
 	}
 	ThingInit(&o->thing, i, KIND_OBJECT, o->Class->Size, amo.ThingFlags);
 	o->Health = amo.Health;
-	o->thing.CPic = o->Class->Pic;
+	o->thing.CPic = *MapObjectDrawCPic(o->Class);
 	o->thing.CPic.Mask = Net2Color(amo.Mask);
 	if (ColorEquals(o->thing.CPic.Mask, colorTransparent))
 	{

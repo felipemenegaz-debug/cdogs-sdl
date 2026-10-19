@@ -88,6 +88,9 @@ typedef struct
 {
 	char *Name;
 	CPic Pic;
+	// Painted picture (graphics/pintado/<pic>), used with
+	// Graphics.PaintedScenery; same size as Pic
+	CPic PaintedPic;
 	struct vec2i Offset;
 	struct
 	{
@@ -159,6 +162,9 @@ void MapObjectsTerminate(MapObjects *classes);
 int MapObjectsCount(const MapObjects *classes);
 
 const Pic *MapObjectGetPic(const MapObject *mo, struct vec2i *offset);
+// The picture new objects are drawn with: the painted one if there is one
+// and Graphics.PaintedScenery is on
+const CPic *MapObjectDrawCPic(const MapObject *mo);
 
 bool MapObjectIsTileOK(
 	const MapObject *obj, const Tile *tile, const Tile *tileAbove);
