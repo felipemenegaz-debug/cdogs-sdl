@@ -695,6 +695,8 @@ Config ConfigDefault(void)
 	ConfigGroupAdd(&gfx, ConfigNewBool("Lights", true));
 	// Painted versions of the characters, where a class has one
 	ConfigGroupAdd(&gfx, ConfigNewBool("PaintedCharacters", true));
+	// Painted floors and walls in every map (from the next map on)
+	ConfigGroupAdd(&gfx, ConfigNewBool("PaintedScenery", true));
 	// Camera pitch and zoom (percent) of the 2.5D view
 	ConfigGroupAdd(
 		&gfx, ConfigNewEnum(

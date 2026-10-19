@@ -293,16 +293,10 @@ void TileClassGetBaseName(char *buf, const TileClass *tc)
 }
 const Pic *TileClassGetPic(const PicManager *pm, const TileClass *tc)
 {
-	char buf[CDOGS_PATH_MAX];
-	char maskName[COLOR_STR_BUF];
-	ColorStr(maskName, tc->Mask);
-	char maskAltName[COLOR_STR_BUF];
-	ColorStr(maskAltName, tc->MaskAlt);
-	sprintf(
-		buf, "%s/%s/%s/%s/%s",
-		tc->Name, tc->Style, tc->StyleType, maskName, maskAltName);
-	const Pic *pic = PicManagerGetPic(pm, buf);
-	return pic;
+	// Same lookup that generated it (it may come from the painted scenery)
+	const NamedPic *n = PicManagerGetMaskedStylePic(
+		pm, tc->Name, tc->Style, tc->StyleType, tc->Mask, tc->MaskAlt);
+	return n != NULL ? &n->pic : NULL;
 }
 
 const TileClass *TileClassesGetExit(

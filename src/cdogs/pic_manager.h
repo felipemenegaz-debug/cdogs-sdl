@@ -63,6 +63,8 @@ Pic *PicManagerGetPic(const PicManager *pm, const char *name);
 const NamedSprites *PicManagerGetSprites(
 	const PicManager *pm, const char *name);
 
+// Floor and wall style that replaces every other with Graphics.PaintedScenery
+#define PAINTED_SCENERY_STYLE "rea-nanquim"
 // Get a masked pic for the styled tiles: walls, floors, rooms
 // Simply calls GetMaskedPic but the name contains the relevant
 // style/type names

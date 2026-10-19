@@ -115,6 +115,8 @@ static bool sLighting = false;
 static const float sAmbient[3] = {0.62f, 0.64f, 0.78f};
 // Under lighting, fogged (seen but out of sight) tiles keep this much light
 #define FOG_LIT 0.5f
+// Size in tiles of a floor style's seamless sheet (tile/<style>/sheet)
+#define SHEET_TILES 8
 #define GLOW_SIZE 64
 static SDL_Texture *sGlow = NULL;
 static bool sGlowFailed = false;
@@ -634,7 +636,28 @@ static void DrawFloorTile(
 	const struct vec2 w1 = TileWorldPos(pos.x + 1, pos.y + 1);
 	const Point3 c[4] = {
 		{w0, 0}, {svec2(w1.x, w0.y), 0}, {w1, 0}, {svec2(w0.x, w1.y), 0}};
-	PrepareTexture(t->Class->Pic->Tex);
+	// A floor style with a seamless sheet (the painted scenery) is sampled
+	// by tile position, so no tile grid shows
+	SDL_Texture *tex = t->Class->Pic->Tex;
+	struct vec2 uv0 = svec2_zero(), uv1 = svec2_one();
+	bool shadowTile = false;
+	if (t->Class->Type == TILE_CLASS_FLOOR && t->Class->Style != NULL)
+	{
+		const NamedPic *sheet = PicManagerGetMaskedStylePic(
+			&gPicManager, "tile", t->Class->Style, "sheet", t->Class->Mask,
+			t->Class->MaskAlt);
+		if (sheet != NULL && sheet->pic.Tex != NULL)
+		{
+			tex = sheet->pic.Tex;
+			const int px = pos.x % SHEET_TILES, py = pos.y % SHEET_TILES;
+			uv0 = svec2((float)px / SHEET_TILES, (float)py / SHEET_TILES);
+			uv1 = svec2(
+				(float)(px + 1) / SHEET_TILES, (float)(py + 1) / SHEET_TILES);
+			shadowTile = t->Class->StyleType != NULL &&
+						 strcmp(t->Class->StyleType, "shadow") == 0;
+		}
+	}
+	PrepareTexture(tex);
 	// Each corner takes the average of the floor tiles around it, so the
 	// edge of what is in sight fades over a tile instead of stepping. Walls
 	// are left out of the average, or rooms would get dark rims along them.
@@ -660,9 +683,16 @@ static void DrawFloorTile(
 		}
 		corner[i] = n > 0 ? sum / n : TileSeen(pos, useFog);
 	}
+	if (shadowTile)
+	{
+		// The wall above shades the top of the tile (the classic shadow
+		// variant is drawn into the pic; the sheet has none)
+		corner[0] *= 0.5f;
+		corner[1] *= 0.5f;
+	}
 	DrawQuad3D(
-		r, t->Class->Pic->Tex, p, c, svec2_zero(), svec2_one(),
-		ToSDLColor(colorWhite, 1.0f), corner, svec2_zero());
+		r, tex, p, c, uv0, uv1, ToSDLColor(colorWhite, 1.0f), corner,
+		svec2_zero());
 }
 
 // Draw a box occupying a whole tile: the texture holds the top face in its

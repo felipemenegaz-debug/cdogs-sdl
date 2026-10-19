@@ -29,6 +29,7 @@
 
 #include <tinydir/tinydir.h>
 
+#include "config.h"
 #include "files.h"
 #include "log.h"
 
@@ -598,12 +599,30 @@ static NamedPic *PicManagerGetMaskedPic(
 	GetMaskedName(maskedName, name, mask, maskAlt);
 	return PicManagerGetNamedPic(pm, maskedName);
 }
+// The painted scenery (Graphics.PaintedScenery) stands in for the floor and
+// wall pics of every style; the pics are greys, so each mission still tints
+// them with its own colours
+static const char *SceneryStyle(
+	const PicManager *pm, const char *name, const char *style,
+	const char *type)
+{
+	if ((strcmp(name, "tile") != 0 && strcmp(name, "wall") != 0) ||
+		!ConfigGetBool(&gConfig, "Graphics.PaintedScenery"))
+	{
+		return style;
+	}
+	char buf[256];
+	sprintf(buf, "%s/%s/%s", name, PAINTED_SCENERY_STYLE, type);
+	return PicManagerGetPic(pm, buf) != NULL ? PAINTED_SCENERY_STYLE : style;
+}
+
 NamedPic *PicManagerGetMaskedStylePic(
 	const PicManager *pm, const char *name, const char *style,
 	const char *type, const color_t mask, const color_t maskAlt)
 {
 	char buf[256];
-	sprintf(buf, "%s/%s/%s", name, style, type);
+	sprintf(
+		buf, "%s/%s/%s", name, SceneryStyle(pm, name, style, type), type);
 	return PicManagerGetMaskedPic(pm, buf, mask, maskAlt);
 }
 
@@ -656,8 +675,19 @@ void PicManagerGenerateMaskedStylePic(
 	const color_t mask, const color_t maskAlt, const bool noAltMask)
 {
 	char buf[256];
-	sprintf(buf, "%s/%s/%s", name, style, type);
+	const char *useStyle = SceneryStyle(pm, name, style, type);
+	sprintf(buf, "%s/%s/%s", name, useStyle, type);
 	PicManagerGenerateMaskedPic(pm, buf, mask, maskAlt, noAltMask);
+	// Floors of the painted style also have a seamless sheet, sampled by
+	// tile position in the 2.5D view
+	if (strcmp(name, "tile") == 0 && useStyle != style)
+	{
+		sprintf(buf, "%s/%s/sheet", name, useStyle);
+		if (PicManagerGetPic(pm, buf) != NULL)
+		{
+			PicManagerGenerateMaskedPic(pm, buf, mask, maskAlt, noAltMask);
+		}
+	}
 }
 
 const NamedSprites *PicManagerGetCharSprites(
