@@ -63,6 +63,7 @@ static struct
 	bool Done;
 	struct vec2 Pos;
 	int Ticks;
+	int Countdown; // last whole second shown over the other lever
 } sLever;
 
 static void Text(const struct vec2 pos, const char *text)
@@ -73,6 +74,15 @@ static void Text(const struct vec2 pos, const char *text)
 	s.u.AddParticle.Z = (BULLET_Z * 2) * Z_FACTOR;
 	strcpy(s.u.AddParticle.Text, text);
 	GameEventsEnqueue(&gGameEvents, s);
+}
+
+// A puzzle sound (sounds/rea/puzzle/<name>, with Sound.ReaSounds)
+static void Sound(const struct vec2 pos, const char *name)
+{
+	GameEvent e = GameEventNew(GAME_EVENT_SOUND_AT);
+	sprintf(e.u.SoundAt.Sound, "puzzle/%s", name);
+	e.u.SoundAt.Pos = Vec2ToNet(pos);
+	GameEventsEnqueue(&gGameEvents, e);
 }
 
 void PuzzlesInit(void)
@@ -178,6 +188,7 @@ static void SealLock(const TObject *seal)
 		}
 	}
 	Text(sSeal.Pos, "Sealed!");
+	Sound(sSeal.Pos, "seal_lock");
 	LOG(LM_MAP, LL_INFO, "seal: %d doors locked, wave of %d",
 		(int)sSeal.LockedTiles.size, (int)sSeal.WaveUIDs.size);
 }
@@ -193,6 +204,7 @@ static void SealOpen(const bool cleared)
 	e.u.MapObjectRemove.ActorUID = -1;
 	GameEventsEnqueue(&gGameEvents, e);
 	Text(sSeal.Pos, cleared ? "Cleared!" : "Unsealed");
+	Sound(sSeal.Pos, "seal_open");
 	LOG(LM_MAP, LL_INFO, "seal open (%s)", cleared ? "cleared" : "time out");
 }
 
@@ -263,21 +275,30 @@ bool PuzzlesGetLeverToFinish(struct vec2 *pos)
 
 void PuzzlesOnObjectDestroyed(const TObject *o)
 {
+	if (strncmp(o->Class->Name, "switch_", 7) == 0 &&
+		strcmp(o->Class->Name, "switch_used") != 0)
+	{
+		Sound(o->thing.Pos, "switch");
+		return;
+	}
 	if (strcmp(o->Class->Name, "lever") != 0 || sLever.Done)
 	{
 		return;
 	}
+	Sound(o->thing.Pos, "lever");
 	if (!sLever.Pending)
 	{
 		sLever.Pending = true;
 		sLever.Pos = o->thing.Pos;
 		sLever.Ticks = 0;
+		sLever.Countdown = -1;
 		return;
 	}
 	// Both down in time
 	sLever.Pending = false;
 	sLever.Done = true;
 	LeverReward(svec2_scale(svec2_add(sLever.Pos, o->thing.Pos), 0.5f));
+	Sound(o->thing.Pos, "bonus");
 	LOG(LM_MAP, LL_INFO, "levers: both down in time");
 }
 
@@ -309,6 +330,7 @@ static void LeverReset(void)
 		GameEventsEnqueue(&gGameEvents, e);
 	}
 	Text(sLever.Pos, "Too slow!");
+	Sound(sLever.Pos, "too_slow");
 	LOG(LM_MAP, LL_INFO, "levers: too slow, the first stands up again");
 }
 
@@ -360,6 +382,21 @@ void PuzzlesUpdate(const int ticks)
 		if (sLever.Ticks > window)
 		{
 			LeverReset();
+		}
+		else
+		{
+			// Count the seconds down over the lever still standing
+			const int left =
+				(window - sLever.Ticks + Seconds(1) - 1) / Seconds(1);
+			const TObject *other = FindObject("lever");
+			if (left != sLever.Countdown && other != NULL)
+			{
+				sLever.Countdown = left;
+				char buf[8];
+				sprintf(buf, "%d", left);
+				Text(other->thing.Pos, buf);
+				Sound(other->thing.Pos, "tick");
+			}
 		}
 	}
 }

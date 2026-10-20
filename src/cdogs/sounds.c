@@ -61,6 +61,7 @@
 #include <tinydir/tinydir.h>
 
 #include "algorithms.h"
+#include "config.h"
 #include "files.h"
 #include "log.h"
 #include "map.h"
@@ -597,6 +598,17 @@ Mix_Chunk *StrSound(const char *s)
 	if (error == MAP_OK)
 	{
 		return SoundDataGet(sound);
+	}
+	// The remaster's own version (sounds/rea/<name>) comes first
+	if (ConfigGetBool(&gConfig, "Sound.ReaSounds"))
+	{
+		char buf[CDOGS_PATH_MAX];
+		sprintf(buf, "rea/%s", s);
+		error = hashmap_get(gSoundDevice.sounds, buf, (any_t *)&sound);
+		if (error == MAP_OK)
+		{
+			return SoundDataGet(sound);
+		}
 	}
 	error = hashmap_get(gSoundDevice.sounds, s, (any_t *)&sound);
 	if (error == MAP_OK)
