@@ -1,3 +1,36 @@
+# C-Dogs Pintado — remaster R.E.A
+
+*A painted remaster of C-Dogs SDL: new hand-painted art inspired by Hades II, a 2.5D view with lights and shadows, fewer enemies and co-op puzzles. Descrição em português abaixo.*
+
+![Partida do C-Dogs Pintado](doc/remaster/jogo-depois.jpg)
+
+Este branch (`remaster-3d`) é um fork do [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) com:
+
+- **Arte nova pintada** para tudo o que aparece na tela: 11 classes de personagem, armas, cenário, objetos, itens, tiros, efeitos, HUD, menus, briefing, animação de morte e fonte. Toda imagem na tela é nova com as opções pintadas ligadas.
+- **Visão 2,5D** com perspectiva, luzes, sombras, modo HD (arte 4x) e escala automática.
+- **Controle:** mira analógica em 360°, movimento com inércia e câmera que antecipa a direção.
+- **Menos inimigos e puzzles:** inimigos a 50%, em ondas finitas, com no máximo 3 atirando ao mesmo tempo; geradores, barricadas rachadas, interruptores de parede, selo que tranca a sala e alavanca dupla cooperativa. A IA aliada atira nos puzzles e corre para derrubar a segunda alavanca.
+
+| | |
+|---|---|
+| ![Menu principal pintado](doc/remaster/menu-depois.jpg) | ![Briefing pintado](doc/remaster/briefing-depois.jpg) |
+| ![Geradores na partida rápida](doc/remaster/puzzle-geradores.jpg) | ![As 11 classes pintadas](doc/remaster/classes.jpg) |
+
+## Como jogar
+
+Baixe o `.zip` da [release mais recente](https://github.com/felipemenegaz-debug/cdogs-sdl/releases) (Windows), extraia e abra `Jogar.bat`. As opções novas ficam em Options: Graphics (`PaintedCharacters`, `PaintedScenery`, `PaintedHUD`, `Perspective`, `HD`) e Game (`Waves`, `MaxShooters`, `Puzzles`). Desligando tudo, o jogo volta ao original.
+
+Para compilar, siga as instruções do C-Dogs SDL logo abaixo; o fork não acrescenta dependências.
+
+## Licenças
+
+- Código: GPL, como o C-Dogs SDL.
+- Arte pintada R.E.A: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), atribuição a R.E.A Studio ([graphics/LICENSE-REA.md](graphics/LICENSE-REA.md)).
+- Arte original de Ronny Wester: CC-BY 3.0 ([doc/README_DATA.md](doc/README_DATA.md)); arte do C-Dogs SDL: CC0 ([graphics/LICENSE.md](graphics/LICENSE.md)).
+- Sons e músicas: CC0, CC-BY e OGA-BY, com autores nos `.txt` ao lado de cada arquivo.
+
+---
+
 # ![C-Dogs SDL](http://cxong.github.io/cdogs-sdl/images/title.png)
 
 [![Build Status](https://github.com/cxong/cdogs-sdl/workflows/Build/badge.svg)](https://github.com/cxong/cdogs-sdl/actions)
