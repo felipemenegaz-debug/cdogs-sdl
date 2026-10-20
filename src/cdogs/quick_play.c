@@ -27,6 +27,8 @@
 */
 #include "quick_play.h"
 
+#include "puzzles.h"
+
 #include <assert.h>
 
 #include "actors.h"
@@ -418,7 +420,11 @@ static void AddMission(
 	for (int i = 0; i < c; i++)
 	{
 		MapObjectDensity mop;
-		mop.M = IndexMapObject(rand() % MapObjectsCount(&gMapObjects));
+		// Puzzle objects are placed by the puzzles themselves
+		do
+		{
+			mop.M = IndexMapObject(rand() % MapObjectsCount(&gMapObjects));
+		} while (PuzzlesIsPuzzleObject(mop.M));
 		if (mop.M->Type == MAP_OBJECT_TYPE_PICKUP_SPAWNER)
 		{
 			mop.Density = 1;

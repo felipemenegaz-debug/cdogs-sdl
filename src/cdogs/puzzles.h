@@ -43,6 +43,9 @@
 void MapAddPuzzleObjects(MapBuilder *mb);
 
 void PuzzlesInit(void);
+// Map objects that belong to the puzzles; the game places them itself, so
+// they stay out of the random objects of quick play
+bool PuzzlesIsPuzzleObject(const MapObject *mo);
 // Server side, every frame
 void PuzzlesUpdate(const int ticks);
 // Doors locked by an active seal don't open

@@ -134,6 +134,24 @@ static bool IsPuzzleTarget(const TActor *actor, const TObject *o)
 	UNUSED(actor);
 	return false;
 }
+// Another player within blast range of pos (a skull barrel explodes and
+// hurts everyone, friendly fire or not)
+static bool AnotherPlayerNear(const TActor *actor, const struct vec2 pos)
+{
+	CA_FOREACH(const PlayerData, pd, gPlayerDatas)
+	if (!IsPlayerAlive(pd) || pd->ActorUID == actor->uid)
+	{
+		continue;
+	}
+	const TActor *a = ActorGetByUID(pd->ActorUID);
+	if (a != NULL && svec2_distance_squared(a->Pos, pos) < SQUARED(3 * 16))
+	{
+		return true;
+	}
+	CA_FOREACH_END()
+	return false;
+}
+
 static const TObject *FindPuzzleTarget(const TActor *actor)
 {
 	if (!ConfigGetBool(&gConfig, "Game.Puzzles"))
@@ -165,6 +183,7 @@ static const TObject *FindPuzzleTarget(const TActor *actor)
 			svec2_distance_squared(o->thing.Pos, best->thing.Pos) <
 				SQUARED(40) &&
 			svec2_distance_squared(actor->Pos, o->thing.Pos) > SQUARED(3 * 16) &&
+			!AnotherPlayerNear(actor, o->thing.Pos) &&
 			AIHasClearShot(actor->Pos, o->thing.Pos))
 		{
 			return o;

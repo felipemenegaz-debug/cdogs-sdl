@@ -28,6 +28,8 @@
 */
 #include "puzzles.h"
 
+#include <stdlib.h>
+
 #include "actors.h"
 #include "config.h"
 #include "game_events.h"
@@ -89,6 +91,25 @@ static void Sound(const struct vec2 pos, const char *name)
 	GameEventsEnqueue(&gGameEvents, e);
 }
 
+bool PuzzlesIsPuzzleObject(const MapObject *mo)
+{
+	static const char *names[] = {
+		"arena_seal", "arena_seal_done", "barricade", "barricade_wreck",
+		"generator", "generator_wreck", "lever", "lever_down"};
+	if (strncmp(mo->Name, "switch_", 7) == 0)
+	{
+		return true;
+	}
+	for (size_t i = 0; i < sizeof names / sizeof names[0]; i++)
+	{
+		if (strcmp(mo->Name, names[i]) == 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void PuzzlesInit(void)
 {
 	CArrayTerminate(&sSeal.LockedTiles);
@@ -105,8 +126,9 @@ bool PuzzlesIsDoorLocked(const struct vec2i tile)
 	{
 		return false;
 	}
+	// The door tiles and the tiles beside them, where the open triggers are
 	CA_FOREACH(const struct vec2i, v, sSeal.LockedTiles)
-	if (svec2i_is_equal(*v, tile))
+	if (abs(v->x - tile.x) + abs(v->y - tile.y) <= 1)
 	{
 		return true;
 	}
@@ -142,6 +164,8 @@ static bool APlayerIsNear(const struct vec2 pos, const float tiles)
 	return false;
 }
 
+static void DoorSet(const struct vec2i v, const bool isOpen);
+static bool TileHasActor(const Tile *t);
 static void SealLock(const TObject *seal)
 {
 	sSeal.Active = true;
@@ -161,6 +185,11 @@ static void SealLock(const TObject *seal)
 			if (t != NULL && t->Class->Type == TILE_CLASS_DOOR)
 			{
 				CArrayPushBack(&sSeal.LockedTiles, &v);
+				// Shut the doors already open (not on someone in the doorway)
+				if (t->Door.IsOpen && !TileHasActor(t))
+				{
+					DoorSet(v, false);
+				}
 			}
 		}
 	}
@@ -197,10 +226,32 @@ static void SealLock(const TObject *seal)
 		(int)sSeal.LockedTiles.size, (int)sSeal.WaveUIDs.size);
 }
 
+static void DoorSet(const struct vec2i v, const bool isOpen)
+{
+	GameEvent e = GameEventNew(GAME_EVENT_DOOR_TOGGLE);
+	e.u.DoorToggle.Pos = Vec2i2Net(v);
+	e.u.DoorToggle.IsOpen = isOpen;
+	GameEventsEnqueue(&gGameEvents, e);
+}
+
+static bool TileHasActor(const Tile *t)
+{
+	CA_FOREACH(const ThingId, tid, t->things)
+	if (tid->Kind == KIND_CHARACTER)
+	{
+		return true;
+	}
+	CA_FOREACH_END()
+	return false;
+}
+
 static void SealOpen(const bool cleared)
 {
 	sSeal.Active = false;
 	sSeal.Done = true;
+	CA_FOREACH(const struct vec2i, v, sSeal.LockedTiles)
+	DoorSet(*v, true);
+	CA_FOREACH_END()
 	CArrayClear(&sSeal.LockedTiles);
 	// The seal goes out (its wreck is the spent seal)
 	GameEvent e = GameEventNew(GAME_EVENT_MAP_OBJECT_REMOVE);
@@ -279,6 +330,10 @@ bool PuzzlesGetLeverToFinish(struct vec2 *pos)
 
 void PuzzlesOnObjectDestroyed(const TObject *o)
 {
+	if (!ConfigGetBool(&gConfig, "Game.Puzzles"))
+	{
+		return;
+	}
 	if (strncmp(o->Class->Name, "switch_", 7) == 0 &&
 		strcmp(o->Class->Name, "switch_used") != 0)
 	{

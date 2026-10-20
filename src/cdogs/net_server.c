@@ -429,6 +429,8 @@ void NetServerSendGameStartMessages(NetServer *n, const int peerId)
 	SendConfig(&gConfig, "Game.Fog", n, peerId);
 	SendConfig(&gConfig, "Game.SightRange", n, peerId);
 	SendConfig(&gConfig, "Game.AllyCollision", n, peerId);
+	// Puzzles change how the map is built (doors become barricades)
+	SendConfig(&gConfig, "Game.Puzzles", n, peerId);
 
 	NetServerSendMsg(n, peerId, GAME_EVENT_NET_GAME_START, NULL);
 
