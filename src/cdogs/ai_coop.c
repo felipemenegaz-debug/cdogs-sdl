@@ -33,6 +33,7 @@
 #include "gamedata.h"
 #include "objs.h"
 #include "pickup.h"
+#include "puzzles.h"
 
 // How many ticks to stay in one confusion state
 #define CONFUSION_STATE_TICKS_MIN 25
@@ -117,6 +118,8 @@ static bool TryCompleteNearbyObjective(
 	const float distanceTooFarFromPlayer, int *cmdOut);
 // Puzzle objects worth a shot: switches, standing levers, barricades
 #define PUZZLE_SIGHT (10 * 16)
+// How far an ally runs to finish a lever pair
+#define LEVER_RUN (24 * 16)
 static bool IsPuzzleTarget(const TActor *actor, const TObject *o)
 {
 	const char *name = o->Class->Name;
@@ -356,6 +359,23 @@ static int AICoopGetCmdNormal(TActor *actor)
 	}
 
 	// Puzzles (Game.Puzzles): shoot switches, levers and barricades in sight
+	// The first lever is down and the clock runs: go knock the other one
+	// down, even out of sight (but not across the whole map)
+	struct vec2 leverPos;
+	if (ConfigGetBool(&gConfig, "Game.Puzzles") &&
+		PuzzlesGetLeverToFinish(&leverPos) &&
+		svec2_distance_squared(actor->Pos, leverPos) < SQUARED(LEVER_RUN))
+	{
+		ActorSetAIState(actor, AI_STATE_HUNT);
+		actor->aiContext->EnemyId = -1;
+		if (AIHasClearShot(actor->Pos, leverPos) &&
+			svec2_distance_squared(actor->Pos, leverPos) < SQUARED(PUZZLE_SIGHT))
+		{
+			return AIAttack(actor, leverPos);
+		}
+		return SmartGoto(
+			actor, leverPos, svec2_distance_squared(actor->Pos, leverPos));
+	}
 	const TObject *puzzle = FindPuzzleTarget(actor);
 	if (puzzle != NULL)
 	{

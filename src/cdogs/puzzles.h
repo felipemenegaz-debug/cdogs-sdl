@@ -47,5 +47,8 @@ void PuzzlesInit(void);
 void PuzzlesUpdate(const int ticks);
 // Doors locked by an active seal don't open
 bool PuzzlesIsDoorLocked(const struct vec2i tile);
+// While the first lever is down and its time runs, the one still standing
+// (for the allies to go knock it down); false otherwise
+bool PuzzlesGetLeverToFinish(struct vec2 *pos);
 // A puzzle object was destroyed (levers)
 void PuzzlesOnObjectDestroyed(const TObject *o);

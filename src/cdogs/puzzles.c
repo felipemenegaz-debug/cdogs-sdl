@@ -246,6 +246,21 @@ static void LeverReward(const struct vec2 pos)
 	Text(pos, "Bonus!");
 }
 
+bool PuzzlesGetLeverToFinish(struct vec2 *pos)
+{
+	if (!sLever.Pending || sLever.Done)
+	{
+		return false;
+	}
+	const TObject *o = FindObject("lever");
+	if (o == NULL)
+	{
+		return false;
+	}
+	*pos = o->thing.Pos;
+	return true;
+}
+
 void PuzzlesOnObjectDestroyed(const TObject *o)
 {
 	if (strcmp(o->Class->Name, "lever") != 0 || sLever.Done)
