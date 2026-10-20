@@ -35,6 +35,8 @@ static menu_t *MenuCreateConfigOptions(
 	OptionsMenuData *data, const bool backOrReturn);
 static menu_t *MenuCreateOptionsGraphics(
 	const char *name, OptionsMenuData *data);
+static menu_t *MenuCreateOptionsRemaster(
+	const char *name, OptionsMenuData *data);
 
 #if !defined(__ANDROID__) && !defined(__GCWZERO__)
 static menu_t *MenuCreateKeys(
@@ -44,6 +46,7 @@ static menu_t *MenuCreateKeys(
 menu_t *MenuCreateOptions(const char *name, OptionsMenuData *data)
 {
 	menu_t *menu = MenuCreateNormal(name, "Options:", MENU_TYPE_NORMAL, 0);
+	MenuAddSubmenu(menu, MenuCreateOptionsRemaster("Remaster...", data));
 	MenuAddSubmenu(
 		menu, MenuCreateConfigOptions(
 				  "Game...", "Game Options:", ConfigGet(data->config, "Game"),
@@ -220,5 +223,68 @@ static menu_t *MenuCreateOptionChangeKey(
 	menu->u.changeKey.code = code;
 	menu->u.changeKey.playerIndex = playerIndex;
 	menu->u.changeKey.isOptional = isOptional;
+	return menu;
+}
+
+// The options of the R.E.A remaster on one page, with two presets
+typedef struct
+{
+	const char *Name;
+	const char *Remaster;
+	const char *Original;
+} RemasterOption;
+static const RemasterOption sRemasterOptions[] = {
+	{"Graphics.Perspective", "true", "false"},
+	{"Graphics.Lights", "true", "false"},
+	{"Graphics.HD", "true", "false"},
+	{"Graphics.PaintedCharacters", "true", "false"},
+	{"Graphics.PaintedScenery", "true", "false"},
+	{"Graphics.PaintedHUD", "true", "false"},
+	{"Sound.ReaSounds", "true", "false"},
+	{"Game.EnemyDensity", "50", "100"},
+	{"Game.Waves", "true", "false"},
+	{"Game.MaxShooters", "3", "0"},
+	{"Game.Puzzles", "true", "false"},
+};
+#define REMASTER_OPTIONS_COUNT                                                 \
+	(sizeof sRemasterOptions / sizeof sRemasterOptions[0])
+static void ApplyRemasterPreset(OptionsMenuData *data, const bool remaster)
+{
+	for (size_t i = 0; i < REMASTER_OPTIONS_COUNT; i++)
+	{
+		const RemasterOption *o = &sRemasterOptions[i];
+		ConfigTrySetFromString(
+			data->config, o->Name, remaster ? o->Remaster : o->Original);
+	}
+	PostInputConfigApply(NULL, 0, data);
+}
+static void UseRemasterPreset(void *data)
+{
+	ApplyRemasterPreset(data, true);
+}
+static void UseOriginalPreset(void *data)
+{
+	ApplyRemasterPreset(data, false);
+}
+static menu_t *MenuCreateOptionsRemaster(
+	const char *name, OptionsMenuData *data)
+{
+	menu_t *menu =
+		MenuCreateNormal(name, "Remaster Options:", MENU_TYPE_OPTIONS, 0);
+	MenuAddSubmenu(
+		menu,
+		MenuCreateVoidFunc("Use remaster settings", UseRemasterPreset, data));
+	MenuAddSubmenu(
+		menu,
+		MenuCreateVoidFunc("Use original settings", UseOriginalPreset, data));
+	MenuAddSubmenu(menu, MenuCreateSeparator(""));
+	for (size_t i = 0; i < REMASTER_OPTIONS_COUNT; i++)
+	{
+		MenuAddConfigOptionsItem(
+			menu, ConfigGet(data->config, sRemasterOptions[i].Name));
+	}
+	MenuAddSubmenu(menu, MenuCreateSeparator(""));
+	MenuAddSubmenu(menu, MenuCreateBack("Done"));
+	MenuSetPostInputFunc(menu, PostInputConfigApply, data);
 	return menu;
 }

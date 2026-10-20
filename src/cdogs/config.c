@@ -801,6 +801,8 @@ Config ConfigDefault(void)
 		&snd, ConfigNewInt("SoundVolume", 64, 0, 64, 8, NULL, Div8Str));
 	ConfigGroupAdd(&snd, ConfigNewBool("Footsteps", true));
 	ConfigGroupAdd(&snd, ConfigNewBool("Reloads", true));
+	// Sounds of the R.E.A remaster (sounds/rea/<name>) where there are some
+	ConfigGroupAdd(&snd, ConfigNewBool("ReaSounds", true));
 	ConfigGroupAdd(&root, snd);
 
 	Config qp = ConfigNewGroup("QuickPlay");
