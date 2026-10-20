@@ -313,14 +313,14 @@ void CharacterOldHairToHeadParts(char *headParts[HEAD_PART_COUNT])
 const NamedSprites *CharacterClassGetDeathSprites(
 	const CharacterClass *c, const PicManager *pm)
 {
-	char buf[256];
-	sprintf(buf, "chars/%s", c->DeathSprites);
+	char buf[CDOGS_PATH_MAX];
+	snprintf(buf, sizeof buf, "chars/%s", c->DeathSprites);
 	const NamedSprites *ns = PicManagerGetSprites(pm, buf);
 	// With painted characters every class dies with the painted animation
 	// (the original is a generic figure too), when it has the same frames
 	if (ConfigGetBool(&gConfig, "Graphics.PaintedCharacters") && ns != NULL)
 	{
-		sprintf(buf, "pintado/chars/%s", c->DeathSprites);
+		snprintf(buf, sizeof buf, "pintado/chars/%s", c->DeathSprites);
 		const NamedSprites *painted = PicManagerGetSprites(pm, buf);
 		if (painted != NULL && painted->pics.size == ns->pics.size)
 		{

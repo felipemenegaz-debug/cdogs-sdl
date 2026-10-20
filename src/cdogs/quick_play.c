@@ -486,8 +486,17 @@ static RoomParams RandomRoomParams(void)
 }
 static void RandomStyle(char *style, const CArray *styleNames)
 {
-	const int idx = rand() % styleNames->size;
-	strcpy(style, *(char **)CArrayGet(styleNames, idx));
+	// The remaster's own styles (rea-*) replace others through
+	// Graphics.PaintedScenery; they are not random choices of their own
+	for (int tries = 0;; tries++)
+	{
+		const int idx = rand() % styleNames->size;
+		strcpy(style, *(char **)CArrayGet(styleNames, idx));
+		if (strncmp(style, "rea-", 4) != 0 || tries >= 100)
+		{
+			break;
+		}
+	}
 }
 static color_t RandomBGColor(void)
 {

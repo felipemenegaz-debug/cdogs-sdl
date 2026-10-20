@@ -147,6 +147,8 @@ void GraphicsInitialize(GraphicsDevice *g)
 		}
 		LOG(LM_GFX, LL_DEBUG, "destroying previous renderer");
 		Draw25DResetTextures();
+		// The font textures belong to this renderer: free them while it lives
+		FontTerminateGame();
 		WindowContextDestroy(&g->gameWindow);
 		WindowContextDestroy(&g->secondWindow);
 		SDL_FreeFormat(g->Format);

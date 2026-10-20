@@ -127,7 +127,9 @@ static bool sUnlit = false;
 
 bool Draw25DIsSupported(void)
 {
-	return HAS_GEOMETRY;
+	// A renderer that cannot make the atlas texture (too big for the video
+	// card) falls back to the classic view instead of a blank world
+	return HAS_GEOMETRY && !sAtlasFailed;
 }
 
 void Draw25DResetTextures(void)
