@@ -10,7 +10,7 @@ Este branch (`remaster-3d`) é um fork do [C-Dogs SDL](https://github.com/cxong/
 - **Visão 2,5D** com perspectiva, luzes, sombras, modo HD (arte 4x) e escala automática.
 - **Controle:** mira analógica em 360°, movimento com inércia e câmera que antecipa a direção.
 - **Sons e músicas novos**, sintetizados para o remaster: tiros, explosões, impactos, passos, itens, interface, puzzles e seis músicas (as vozes são as originais).
-- **Menos inimigos e puzzles:** inimigos a 50%, em ondas finitas, com no máximo 3 atirando ao mesmo tempo; geradores, barricadas rachadas, interruptores de parede, selo que tranca a sala e alavanca dupla cooperativa. A IA aliada atira nos puzzles e corre para derrubar a segunda alavanca.
+- **Menos inimigos e puzzles:** inimigos a 50%, em ondas finitas, com no máximo 3 atirando ao mesmo tempo; barricadas rachadas, interruptores de parede, selo que tranca a sala e alavanca dupla cooperativa (e geradores na partida rápida, que o C-Dogs SDL deixou só no fundo do menu). A IA aliada atira nos puzzles e corre para derrubar a segunda alavanca.
 
 | | |
 |---|---|
