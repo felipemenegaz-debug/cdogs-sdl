@@ -174,6 +174,7 @@ static void SealLock(const TObject *seal)
 	sSeal.Ticks = 0;
 	CArrayClear(&sSeal.LockedTiles);
 	CArrayClear(&sSeal.WaveUIDs);
+	int shut = 0;
 	// Lock the doors around
 	const struct vec2i c = Vec2ToTile(sSeal.Pos);
 	for (int dy = -SEAL_LOCK_TILES; dy <= SEAL_LOCK_TILES; dy++)
@@ -189,6 +190,7 @@ static void SealLock(const TObject *seal)
 				if (t->Door.IsOpen && !TileHasActor(t))
 				{
 					DoorSet(v, false);
+					shut++;
 				}
 			}
 		}
@@ -222,8 +224,8 @@ static void SealLock(const TObject *seal)
 	}
 	Text(sSeal.Pos, "Sealed!");
 	Sound(sSeal.Pos, "seal_lock");
-	LOG(LM_MAP, LL_INFO, "seal: %d doors locked, wave of %d",
-		(int)sSeal.LockedTiles.size, (int)sSeal.WaveUIDs.size);
+	LOG(LM_MAP, LL_INFO, "seal: %d doors locked (%d shut), wave of %d",
+		(int)sSeal.LockedTiles.size, shut, (int)sSeal.WaveUIDs.size);
 }
 
 static void DoorSet(const struct vec2i v, const bool isOpen)
