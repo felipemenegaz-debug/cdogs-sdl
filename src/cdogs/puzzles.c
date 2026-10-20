@@ -38,6 +38,9 @@
 
 // Seal: doors this far (tiles) from it lock, the wave comes this far
 #define SEAL_TRIGGER_TILES 2.5f
+// The seal arms only once every player is this far, so spawning beside it
+// does not lock anyone in
+#define SEAL_ARM_TILES 6.0f
 #define SEAL_LOCK_TILES 8
 #define SEAL_TIMEOUT_S 45
 // Levers: how far apart (tiles) and how long between the two
@@ -48,6 +51,7 @@
 
 static struct
 {
+	bool Armed;
 	bool Active;
 	bool Done;
 	int SealUID;
@@ -352,7 +356,15 @@ void PuzzlesUpdate(const int ticks)
 		else
 		{
 			const TObject *seal = FindObject("arena_seal");
-			if (seal != NULL &&
+			if (seal != NULL && !sSeal.Armed)
+			{
+				// (only once the players are in the map)
+				sSeal.Armed =
+					GetNumPlayers(PLAYER_ALIVE, false, false) > 0 &&
+					!APlayerIsNear(seal->thing.Pos, SEAL_ARM_TILES);
+			}
+			else if (
+				seal != NULL &&
 				APlayerIsNear(seal->thing.Pos, SEAL_TRIGGER_TILES))
 			{
 				SealLock(seal);
