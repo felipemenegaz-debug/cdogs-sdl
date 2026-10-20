@@ -275,6 +275,8 @@ static menu_t *MenuCreateOptionsRemaster(
 {
 	menu_t *menu =
 		MenuCreateNormal(name, "Remaster Options:", MENU_TYPE_OPTIONS, 0);
+	// Long page: scroll instead of running into the title
+	menu->u.normal.maxItems = 12;
 	MenuAddSubmenu(
 		menu,
 		MenuCreateVoidFunc("Use remaster settings", UseRemasterPreset, data));
