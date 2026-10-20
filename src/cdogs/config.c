@@ -802,7 +802,7 @@ Config ConfigDefault(void)
 	ConfigGroupAdd(&snd, ConfigNewBool("Footsteps", true));
 	ConfigGroupAdd(&snd, ConfigNewBool("Reloads", true));
 	// Sounds of the R.E.A remaster (sounds/rea/<name>) where there are some
-	ConfigGroupAdd(&snd, ConfigNewBool("ReaSounds", true));
+	ConfigGroupAdd(&snd, ConfigNewBool("RemasterSounds", true));
 	ConfigGroupAdd(&root, snd);
 
 	Config qp = ConfigNewGroup("QuickPlay");

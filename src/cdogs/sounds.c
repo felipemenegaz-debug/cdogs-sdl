@@ -600,7 +600,7 @@ Mix_Chunk *StrSound(const char *s)
 		return SoundDataGet(sound);
 	}
 	// The remaster's own version (sounds/rea/<name>) comes first
-	if (ConfigGetBool(&gConfig, "Sound.ReaSounds"))
+	if (ConfigGetBool(&gConfig, "Sound.RemasterSounds"))
 	{
 		char buf[CDOGS_PATH_MAX];
 		sprintf(buf, "rea/%s", s);

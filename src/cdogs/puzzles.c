@@ -80,7 +80,7 @@ static void Text(const struct vec2 pos, const char *text)
 	GameEventsEnqueue(&gGameEvents, s);
 }
 
-// A puzzle sound (sounds/rea/puzzle/<name>, with Sound.ReaSounds)
+// A puzzle sound (sounds/rea/puzzle/<name>, with Sound.RemasterSounds)
 static void Sound(const struct vec2 pos, const char *name)
 {
 	GameEvent e = GameEventNew(GAME_EVENT_SOUND_AT);
