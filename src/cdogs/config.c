@@ -803,6 +803,8 @@ Config ConfigDefault(void)
 	ConfigGroupAdd(&snd, ConfigNewBool("Reloads", true));
 	// Sounds of the R.E.A remaster (sounds/rea/<name>) where there are some
 	ConfigGroupAdd(&snd, ConfigNewBool("RemasterSounds", true));
+	// Music of the R.E.A remaster (music/rea/<type>)
+	ConfigGroupAdd(&snd, ConfigNewBool("RemasterMusic", true));
 	ConfigGroupAdd(&root, snd);
 
 	Config qp = ConfigNewGroup("QuickPlay");

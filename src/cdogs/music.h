@@ -92,6 +92,8 @@ typedef struct
 		} chunk;
 	} u;
 	CArray generalTracks[MUSIC_COUNT]; // of Mix_Music *
+	// The remaster's own music (music/rea/<type>), with Sound.RemasterMusic
+	CArray remasterTracks[MUSIC_COUNT]; // of Mix_Music *
 	char errorMessage[128];
 } MusicPlayer;
 

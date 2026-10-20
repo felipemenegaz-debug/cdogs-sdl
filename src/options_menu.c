@@ -241,6 +241,7 @@ static const RemasterOption sRemasterOptions[] = {
 	{"Graphics.PaintedScenery", "true", "false"},
 	{"Graphics.PaintedHUD", "true", "false"},
 	{"Sound.RemasterSounds", "true", "false"},
+	{"Sound.RemasterMusic", "true", "false"},
 	{"Game.EnemyDensity", "50", "100"},
 	{"Game.Waves", "true", "false"},
 	{"Game.MaxShooters", "3", "0"},

@@ -48,6 +48,12 @@ void MusicPlayerInit(MusicPlayer *mp)
 	LoadMusic(&mp->generalTracks[MUSIC_END], "music/end");
 	LoadMusic(&mp->generalTracks[MUSIC_LOSE], "music/lose");
 	LoadMusic(&mp->generalTracks[MUSIC_VICTORY], "music/victory");
+	LoadMusic(&mp->remasterTracks[MUSIC_MENU], "music/rea/menu");
+	LoadMusic(&mp->remasterTracks[MUSIC_BRIEFING], "music/rea/briefing");
+	LoadMusic(&mp->remasterTracks[MUSIC_GAME], "music/rea/game");
+	LoadMusic(&mp->remasterTracks[MUSIC_END], "music/rea/end");
+	LoadMusic(&mp->remasterTracks[MUSIC_LOSE], "music/rea/lose");
+	LoadMusic(&mp->remasterTracks[MUSIC_VICTORY], "music/rea/victory");
 }
 static void LoadMusic(CArray *tracks, const char *path)
 {
@@ -93,6 +99,7 @@ void MusicPlayerTerminate(MusicPlayer *mp)
 	for (MusicType type = MUSIC_MENU; type < MUSIC_COUNT; type++)
 	{
 		UnloadMusic(&mp->generalTracks[type]);
+		UnloadMusic(&mp->remasterTracks[type]);
 	}
 }
 static void UnloadMusic(CArray *tracks)
@@ -160,6 +167,13 @@ void MusicPlayGeneral(MusicPlayer *mp, const MusicType type)
 	MusicStop(mp);
 	mp->type = MUSIC_SRC_GENERAL;
 	CArray *tracks = &mp->generalTracks[type];
+	if (ConfigGetBool(&gConfig, "Sound.RemasterMusic") &&
+		mp->remasterTracks[type].size > 0)
+	{
+		tracks = &mp->remasterTracks[type];
+	}
+	LOG(LM_SOUND, LL_DEBUG, "music %d: %s tracks", (int)type,
+		tracks == &mp->remasterTracks[type] ? "remaster" : "original");
 	if (tracks->size == 0)
 	{
 		return;
