@@ -289,6 +289,24 @@ static int AICoopGetCmdNormal(TActor *actor)
 		actor->aiContext->OnGunId = -1;
 	}
 
+	// The first lever is down and the clock runs (a few seconds): knocking
+	// the other one down comes before following the leader or fighting, even
+	// out of sight (but not across the whole map)
+	struct vec2 leverPos;
+	if (ConfigGetBool(&gConfig, "Game.Puzzles") &&
+		PuzzlesGetLeverToFinish(&leverPos) &&
+		svec2_distance_squared(actor->Pos, leverPos) < SQUARED(LEVER_RUN))
+	{
+		ActorSetAIState(actor, AI_STATE_HUNT);
+		actor->aiContext->EnemyId = -1;
+		if (AIHasClearShot(actor->Pos, leverPos) &&
+			svec2_distance_squared(actor->Pos, leverPos) < SQUARED(PUZZLE_SIGHT))
+		{
+			return AIAttack(actor, leverPos);
+		}
+		return SmartGoto(
+			actor, leverPos, svec2_distance_squared(actor->Pos, leverPos));
+	}
 	// Find nearby players, and move out of the way if any of them are facing
 	// directly at us
 	// Follow the closest player with a lower UID
@@ -359,23 +377,6 @@ static int AICoopGetCmdNormal(TActor *actor)
 	}
 
 	// Puzzles (Game.Puzzles): shoot switches, levers and barricades in sight
-	// The first lever is down and the clock runs: go knock the other one
-	// down, even out of sight (but not across the whole map)
-	struct vec2 leverPos;
-	if (ConfigGetBool(&gConfig, "Game.Puzzles") &&
-		PuzzlesGetLeverToFinish(&leverPos) &&
-		svec2_distance_squared(actor->Pos, leverPos) < SQUARED(LEVER_RUN))
-	{
-		ActorSetAIState(actor, AI_STATE_HUNT);
-		actor->aiContext->EnemyId = -1;
-		if (AIHasClearShot(actor->Pos, leverPos) &&
-			svec2_distance_squared(actor->Pos, leverPos) < SQUARED(PUZZLE_SIGHT))
-		{
-			return AIAttack(actor, leverPos);
-		}
-		return SmartGoto(
-			actor, leverPos, svec2_distance_squared(actor->Pos, leverPos));
-	}
 	const TObject *puzzle = FindPuzzleTarget(actor);
 	if (puzzle != NULL)
 	{
