@@ -59,6 +59,10 @@ static void SetStick(const float deg, const float push)
 	memset(&e, 0, sizeof e);
 	e.which = sId;
 	e.axis = SDL_CONTROLLER_AXIS_LEFTX;
+	e.value = (Sint16)(v.x * 32767);
+	JoyOnAxis(e);
+	e.axis = SDL_CONTROLLER_AXIS_LEFTY;
+	e.value = (Sint16)(v.y * 32767);
 	JoyOnAxis(e);
 }
 
@@ -67,6 +71,7 @@ FEATURE(stick_reading, "Reading the analog stick")
 	SDL_SetMainReady();
 	SDL_Init(SDL_INIT_GAMECONTROLLER);
 	CArrayInit(&gEventHandlers.joysticks, sizeof(Joystick));
+	gConfig = ConfigDefault();
 	const int index = SDL_JoystickAttachVirtual(
 		SDL_JOYSTICK_TYPE_GAMECONTROLLER, SDL_CONTROLLER_AXIS_MAX,
 		SDL_CONTROLLER_BUTTON_MAX, 0);
@@ -163,6 +168,23 @@ FEATURE(stick_reading, "Reading the analog stick")
 			SetStick(0, 1);
 		THEN("the player should move again")
 			SHOULD_BE_FALSE(svec2_is_zero(JoyGetMove(sId)));
+
+	SCENARIO_END
+
+	SCENARIO("With the analog stick option off")
+		GIVEN("Interface.AnalogStick off and the stick at 30 degrees")
+			ConfigTrySetFromString(&gConfig, "Interface.AnalogStick", "false");
+			SetStick(0, 0);
+			SetStick(30, 1);
+		THEN("there should be no analog movement")
+			SHOULD_BE_TRUE(svec2_is_zero(JoyGetMove(sId)));
+		AND("right should be pressed, as in the original")
+			SHOULD_BE_TRUE(JoyIsDown(sId, CMD_RIGHT));
+		GIVEN("the stick pushed only 40% to the right")
+			SetStick(0, 0.4f);
+		THEN("nothing should be pressed: the original dead zone is half way")
+			SHOULD_BE_FALSE(JoyIsDown(sId, CMD_RIGHT));
+		ConfigTrySetFromString(&gConfig, "Interface.AnalogStick", "true");
 
 	SCENARIO_END
 

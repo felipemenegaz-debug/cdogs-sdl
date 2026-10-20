@@ -27,6 +27,7 @@
 #include "camera.h"
 
 #include "actors.h"
+#include "config.h"
 #include "draw/draw.h"
 #include "draw/drawtools.h"
 #include "events.h"
@@ -350,7 +351,7 @@ static struct vec2 UpdateLook(
 	Camera *camera, const int i, const TActor *a, const struct vec2i viewSize,
 	const int ms)
 {
-	if (a == NULL)
+	if (a == NULL || !ConfigGetBool(&gConfig, "Interface.CameraLookAhead"))
 	{
 		camera->LookActorUID[i] = -1;
 		camera->Look[i] = svec2_zero();

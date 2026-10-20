@@ -32,6 +32,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "config.h"
 #include "defs.h"
 #include "events.h"
 #include "log.h"
@@ -306,7 +307,8 @@ struct vec2 JoyGetMove(const SDL_JoystickID id)
 	const Joystick *j = GetJoystick(id);
 	// No stick direction held (or held directions are locked after a
 	// menu): fall back to the digital commands
-	if (j == NULL || !(j->currentCmd & ~j->lockedCmd & CMD_DIRECTIONS))
+	if (j == NULL || !(j->currentCmd & ~j->lockedCmd & CMD_DIRECTIONS) ||
+		!ConfigGetBool(&gConfig, "Interface.AnalogStick"))
 	{
 		return svec2_zero();
 	}
@@ -321,8 +323,26 @@ void JoyOnAxis(const SDL_ControllerAxisEvent e)
 	switch (e.axis)
 	{
 	case SDL_CONTROLLER_AXIS_LEFTX:
+		if (ConfigGetBool(&gConfig, "Interface.AnalogStick"))
+		{
+			JoyOnLeftStick(j);
+		}
+		else
+		{
+			JoyOnCmd(j, CMD_LEFT, e.value < -DEADZONE);
+			JoyOnCmd(j, CMD_RIGHT, e.value > DEADZONE);
+		}
+		break;
 	case SDL_CONTROLLER_AXIS_LEFTY:
-		JoyOnLeftStick(j);
+		if (ConfigGetBool(&gConfig, "Interface.AnalogStick"))
+		{
+			JoyOnLeftStick(j);
+		}
+		else
+		{
+			JoyOnCmd(j, CMD_UP, e.value < -DEADZONE);
+			JoyOnCmd(j, CMD_DOWN, e.value > DEADZONE);
+		}
 		break;
 	case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
 		// Right trigger fire

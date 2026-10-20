@@ -90,6 +90,8 @@
 // Pixels walked per walk cycle (two steps). The run legs are ~16 px apart at
 // full stride, so a planted foot travels ~16 px per step.
 #define WALK_STRIDE 32.0f
+// Original walk animation speed limit (Game.SmoothMovement off)
+#define FOOTSTEP_MAX_ANIM_SPEED 2
 #define REPEL_STRENGTH 0.06f
 #define SLIDE_LOCK 50
 #define SLIDE_X (TILE_WIDTH / 3)
@@ -356,8 +358,19 @@ void UpdateActorState(TActor *actor, int ticks)
 	float animTicks = (float)ticks;
 	if (actor->anim.Type == ACTORANIMATION_WALKING)
 	{
-		// Walk cycle follows the distance walked, so the feet don't slide
-		animTicks = ActorWalkAnimTicks(actor->WalkDist);
+		if (ConfigGetBool(&gConfig, "Game.SmoothMovement"))
+		{
+			// Walk cycle follows the distance walked, so the feet don't slide
+			animTicks = ActorWalkAnimTicks(actor->WalkDist);
+		}
+		else
+		{
+			// Original: based on the actor's speed
+			animTicks =
+				MIN(svec2_length(svec2_add(actor->MoveVel, actor->thing.Vel)),
+					FOOTSTEP_MAX_ANIM_SPEED) *
+				(float)ticks;
+		}
 	}
 	AnimationUpdate(&actor->anim, animTicks);
 
@@ -1403,6 +1416,7 @@ static bool ActorTryMove(TActor *actor, int cmd, int ticks)
 	// keeps its exact movement, as it steers every tick and would only
 	// overshoot its waypoints
 	const bool hasInertia =
+		ConfigGetBool(&gConfig, "Game.SmoothMovement") &&
 		actor->PlayerUID >= 0 &&
 		IsPlayerHuman(PlayerDataGetByUID(actor->PlayerUID));
 	if (hasInertia)

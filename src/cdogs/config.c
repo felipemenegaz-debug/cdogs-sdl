@@ -622,6 +622,9 @@ Config ConfigDefault(void)
 	ConfigGroupAdd(&game, ConfigNewInt("MaxShooters", 0, 0, 20, 1, NULL, NULL));
 	// Quick play maps get puzzles (generators that seal the exit)
 	ConfigGroupAdd(&game, ConfigNewBool("Puzzles", false));
+	// Walking inertia for human players and a walk cycle that follows the
+	// distance walked (off: the original movement)
+	ConfigGroupAdd(&game, ConfigNewBool("SmoothMovement", true));
 	ConfigGroupAdd(
 		&game, ConfigNewInt("PlayerHP", 75, 25, 200, 25, NULL, PercentStr));
 	ConfigGroupAdd(&game, ConfigNewInt("Lives", 2, 1, 5, 1, NULL, NULL));
@@ -780,6 +783,10 @@ Config ConfigDefault(void)
 
 	Config itf = ConfigNewGroup("Interface");
 	ConfigGroupAdd(&itf, ConfigNewBool("ShowFPS", false));
+	// Free analog movement and aim with the left stick (off: 8 directions)
+	ConfigGroupAdd(&itf, ConfigNewBool("AnalogStick", true));
+	// The camera leans towards the aim and the movement (off: centred)
+	ConfigGroupAdd(&itf, ConfigNewBool("CameraLookAhead", true));
 	ConfigGroupAdd(&itf, ConfigNewBool("ShowTime", false));
 	ConfigGroupAdd(&itf, ConfigNewBool("ShowHUDMap", true));
 	ConfigGroupAdd(

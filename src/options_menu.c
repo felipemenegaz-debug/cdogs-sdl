@@ -246,6 +246,9 @@ static const RemasterOption sRemasterOptions[] = {
 	{"Game.Waves", "true", "false"},
 	{"Game.MaxShooters", "3", "0"},
 	{"Game.Puzzles", "true", "false"},
+	{"Game.SmoothMovement", "true", "false"},
+	{"Interface.AnalogStick", "true", "false"},
+	{"Interface.CameraLookAhead", "true", "false"},
 };
 #define REMASTER_OPTIONS_COUNT                                                 \
 	(sizeof sRemasterOptions / sizeof sRemasterOptions[0])
